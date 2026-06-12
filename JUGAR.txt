@@ -1,0 +1,37 @@
+OPERATION DEAD FRONT — MVP 0.1 jugable
+======================================
+
+OPCIÓN A — Jugar ya, sin compilar (lo más rápido)
+-------------------------------------------------
+La carpeta /dist es el juego ya buildeado. Necesita servirse por HTTP
+(abrir el index.html con doble clic NO funciona por las restricciones de
+módulos del navegador). Desde esta carpeta:
+
+    npx serve dist
+        (o)
+    python3 -m http.server --directory dist 8080
+
+y abrí la URL que imprime (ej. http://localhost:8080).
+
+OPCIÓN B — Modo desarrollo (hot reload)
+---------------------------------------
+    npm install
+    npm run dev
+
+y abrí la URL que imprime Vite (normalmente http://localhost:5173).
+
+OPCIÓN C — Rebuild de la versión estática
+-----------------------------------------
+    npm install
+    npm run build      # genera /dist de cero
+    npm run preview    # lo sirve localmente
+
+CÓMO SE JUEGA
+-------------
+- Tocá la carta RIFLEMAN abajo para desplegar tropa (cuesta 25 supplies).
+- Los riflemen avanzan y pelean solos.
+- Los Revenant Grunts aparecen cada 3,5 s y empujan hacia tu HQ.
+- Supplies se regeneran (+8/s) y subís bounty por cada muerto.
+- Ganás si tirás abajo el bastión REICH; perdés si tu HQ llega a 0.
+
+Más detalle en README.md. Diseño completo en docs/.

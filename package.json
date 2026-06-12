@@ -1,0 +1,19 @@
+{
+  "name": "operation-dead-front",
+  "version": "0.1.0",
+  "description": "Operation Dead Front — tactical roguelite mobile (Phaser 3 + TS + Vite).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+}

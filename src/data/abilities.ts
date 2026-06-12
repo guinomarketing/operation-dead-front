@@ -1,0 +1,100 @@
+import type { AbilityDef } from '../types/AbilityTypes';
+
+/** Habilidades activas de comandante (2 slots base, 3 con war-room T3). */
+export const ABILITIES: AbilityDef[] = [
+  {
+    id: 'airstrike',
+    name: 'Airstrike',
+    description: 'Calls a bombing run: 80 damage in a 140 px radius after a 1s delay.',
+    useCase: 'Break clumps, elites or the bastion push.',
+    cost: 50,
+    cooldown: 45000,
+    targeted: true,
+    effect: { kind: 'zone-damage', damage: 80, radius: 140, delayMs: 1000 },
+  },
+  {
+    id: 'artillery-barrage',
+    name: 'Artillery Barrage',
+    description: '5 shells over 4 seconds, 35 damage each, on the targeted zone.',
+    useCase: 'Sustained denial of a lane or the spawn line.',
+    cost: 70,
+    cooldown: 60000,
+    targeted: true,
+    effect: { kind: 'zone-damage', damage: 35, radius: 110, ticks: 5, intervalMs: 800 },
+  },
+  {
+    id: 'medkit',
+    name: 'Medkit Drop',
+    description: 'Heals 40 HP to all allies in a 120 px radius.',
+    useCase: 'Save a winning but bleeding frontline.',
+    cost: 30,
+    cooldown: 25000,
+    targeted: true,
+    effect: { kind: 'zone-heal', heal: 40, radius: 120 },
+  },
+  {
+    id: 'rally',
+    name: 'Rally',
+    description: 'All allies: +30% speed and +20% damage for 6s. +10 morale.',
+    useCase: 'Convert a small edge into a breakthrough.',
+    cost: 25,
+    cooldown: 30000,
+    targeted: false,
+    effect: {
+      kind: 'squad-buff',
+      durationMs: 6000,
+      moraleBonus: 10,
+      modifiers: [
+        { stat: 'moveSpeed', op: 'mul', value: 1.3, filter: { side: 'ally' } },
+        { stat: 'damage', op: 'mul', value: 1.2, filter: { side: 'ally' } },
+      ],
+    },
+  },
+  {
+    id: 'supply-drop',
+    name: 'Supply Drop',
+    description: 'Free crate with a random gift: +60 supplies, a squad heal, or a damage buff.',
+    useCase: 'Free value on cooldown; gamble when nothing is urgent.',
+    cost: 0,
+    cooldown: 50000,
+    targeted: false,
+    effect: { kind: 'random-supply', options: ['supplies', 'heal', 'damage-buff'] },
+  },
+  {
+    id: 'smoke-screen',
+    name: 'Smoke Screen',
+    description: 'Enemies in the cloud lose 50% range for 6s; allies inside take 30% less damage.',
+    useCase: 'Neutralize casters and survive heavy pushes.',
+    cost: 20,
+    cooldown: 35000,
+    targeted: true,
+    effect: {
+      kind: 'zone-debuff',
+      radius: 130,
+      durationMs: 6000,
+      allyDamageReductionPct: 30,
+      modifiers: [{ stat: 'range', op: 'mul', value: 0.5, filter: { side: 'enemy' } }],
+    },
+  },
+  {
+    id: 'holy-flare',
+    name: 'Holy Flare',
+    description: 'Sacred light: +50% damage vs occult units for 6s and stuns revived corpses 2s.',
+    useCase: 'Counter Occultists and revive-heavy fights.',
+    cost: 35,
+    cooldown: 40000,
+    targeted: true,
+    effect: {
+      kind: 'flare',
+      radius: 170,
+      durationMs: 6000,
+      bonusVsTags: ['occult'],
+      bonusDamageMult: 1.5,
+      stunRevivedMs: 2000,
+    },
+  },
+];
+
+export const ABILITY_INDEX: Record<string, AbilityDef> = Object.fromEntries(
+  ABILITIES.map((a) => [a.id, a]),
+);
