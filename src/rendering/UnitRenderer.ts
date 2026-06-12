@@ -44,20 +44,33 @@ export class UnitRenderer {
 
     const y = FIELD.LANES_Y[c.lane];
     const textureKey = SpriteFactory.getTextureKey(c.defId, c.faction);
+    const isAssetImage = textureKey === 'unit-rifleman' || textureKey === 'enemy-revenant-grunt';
+
+    const dispW = isAssetImage ? 56 : DISPLAY_W;
+    const dispH = isAssetImage ? 56 : this.displayH;
 
     // Shadow
-    this.shadow = scene.add.ellipse(c.x, y + this.displayH / 2 - 2, 24, 8, 0x000000, 0.25);
+    this.shadow = scene.add.ellipse(c.x, y + dispH / 2 - 2, 24, 8, 0x000000, 0.25);
     this.shadow.setDepth(y - 1);
 
     // Main sprite
     const hasTexture = scene.textures.exists(textureKey);
+    let sourceW = 64;
+    let sourceH = 96;
+
     if (hasTexture) {
       this.sprite = scene.add.image(c.x, y, textureKey);
-      this.sprite.setDisplaySize(DISPLAY_W, this.displayH);
+      const tex = scene.textures.get(textureKey);
+      const srcImg = tex.getSourceImage() as HTMLImageElement;
+      if (srcImg) {
+        sourceW = srcImg.width;
+        sourceH = srcImg.height;
+      }
+      this.sprite.setDisplaySize(dispW, dispH);
     } else {
       // Fallback: create a colored rectangle image via a temp texture
       this.sprite = scene.add.image(c.x, y, '__DEFAULT');
-      this.sprite.setDisplaySize(DISPLAY_W, this.displayH);
+      this.sprite.setDisplaySize(dispW, dispH);
       this.sprite.setTint(c.color);
     }
 
@@ -69,9 +82,9 @@ export class UnitRenderer {
     this.sprite.setOrigin(0.5, 0.5);
 
     // Health bar
-    const barW = DISPLAY_W + 4;
+    const barW = dispW + 4;
     const barH = 4;
-    const barY = -this.displayH / 2 - 8;
+    const barY = -dispH / 2 - 8;
 
     this.hpBarBg = scene.add.rectangle(0, barY, barW, barH, COLORS.hpBg).setOrigin(0.5);
     this.hpBarTrail = scene.add.rectangle(-barW / 2, barY, barW, barH - 1, COLORS.hpTrail).setOrigin(0, 0.5);
@@ -90,12 +103,16 @@ export class UnitRenderer {
 
     // Spawn animation
     this.sprite.setAlpha(0);
-    this.sprite.setScale(0.5);
+    this.sprite.setScale(0);
+
+    const scaleXDest = (c.faction === 'enemy' ? -1 : 1) * (dispW / sourceW);
+    const scaleYDest = dispH / sourceH;
+
     scene.tweens.add({
       targets: this.sprite,
       alpha: 1,
-      scaleX: c.faction === 'enemy' ? -1 * (DISPLAY_W / 64) : DISPLAY_W / 64,
-      scaleY: this.displayH / (this.isDog ? 56 : 96),
+      scaleX: scaleXDest,
+      scaleY: scaleYDest,
       duration: 200,
       ease: 'Back.easeOut',
     });

@@ -12,8 +12,6 @@ import { SpriteFactory } from '../rendering/SpriteFactory';
 import { UnitRenderer } from '../rendering/UnitRenderer';
 
 // ── Layout constants ──────────────────────────────────────
-const FIELD_TOP = 380;
-const FIELD_BOTTOM = 700;
 const HUD_HEIGHT = 110;
 const DEPLOY_PANEL_TOP = GAME_HEIGHT - 200;
 
@@ -66,10 +64,7 @@ export class BattleScene extends Phaser.Scene {
     SpriteFactory.ensureTextures(this);
 
     // Build the scene layers (order matters for depth)
-    this.drawSky();
-    this.drawDistantRuins();
-    this.drawMidGround();
-    this.drawTerrain();
+    this.drawBattlefieldBackground();
     this.drawBases();
     this.startAmbientParticles();
     this.buildHud();
@@ -84,207 +79,10 @@ export class BattleScene extends Phaser.Scene {
   //  BACKGROUND LAYERS
   // ═══════════════════════════════════════════════════════════
 
-  private drawSky(): void {
-    this.cameras.main.setBackgroundColor(hex(COLORS.skyTop));
-
-    const g = this.add.graphics();
-    g.setDepth(-100);
-
-    // Sky gradient (top to horizon)
-    const steps = 20;
-    const skyHeight = FIELD_TOP + 40;
-    const stepH = skyHeight / steps;
-    for (let i = 0; i < steps; i++) {
-      const t = i / steps;
-      let colorObj: Phaser.Types.Display.ColorObject;
-      if (t < 0.6) {
-        // Dark blue to purple
-        const tt = t / 0.6;
-        colorObj = Phaser.Display.Color.Interpolate.ColorWithColor(
-          Phaser.Display.Color.IntegerToColor(COLORS.skyTop),
-          Phaser.Display.Color.IntegerToColor(COLORS.skyMid),
-          100, Math.round(tt * 100)
-        );
-        g.fillStyle(Phaser.Display.Color.GetColor(colorObj.r, colorObj.g, colorObj.b));
-      } else {
-        // Purple to fiery horizon
-        const tt = (t - 0.6) / 0.4;
-        colorObj = Phaser.Display.Color.Interpolate.ColorWithColor(
-          Phaser.Display.Color.IntegerToColor(COLORS.skyMid),
-          Phaser.Display.Color.IntegerToColor(COLORS.skyHorizon),
-          100, Math.round(tt * 100)
-        );
-        g.fillStyle(Phaser.Display.Color.GetColor(colorObj.r, colorObj.g, colorObj.b));
-      }
-      g.fillRect(0, i * stepH, GAME_WIDTH, stepH + 1);
-    }
-
-    // Distant fire glow at horizon
-    g.fillStyle(COLORS.skyFire, 0.15);
-    g.fillRect(0, FIELD_TOP - 20, GAME_WIDTH, 40);
-
-    // Clouds
-    g.fillStyle(COLORS.cloudDark, 0.3);
-    g.fillEllipse(120, 80, 200, 30);
-    g.fillEllipse(380, 50, 160, 20);
-    g.fillEllipse(60, 130, 140, 25);
-    g.fillEllipse(450, 120, 180, 28);
-    g.fillStyle(COLORS.cloudLight, 0.15);
-    g.fillEllipse(280, 100, 220, 22);
-  }
-
-  private drawDistantRuins(): void {
-    const g = this.add.graphics();
-    g.setDepth(-90);
-    const baseY = FIELD_TOP - 10;
-
-    // Draw silhouettes of destroyed buildings against the sky
-    g.fillStyle(0x0e0e0e, 0.8);
-
-    // Destroyed church steeple
-    g.fillRect(80, baseY - 80, 20, 80);
-    g.fillTriangle(70, baseY - 80, 90, baseY - 120, 110, baseY - 80);
-    // Broken top
-    g.fillRect(85, baseY - 115, 10, 15);
-
-    // Collapsed factory
-    g.fillRect(160, baseY - 50, 80, 50);
-    g.fillRect(170, baseY - 70, 15, 20);
-    g.fillRect(200, baseY - 65, 30, 15);
-    // Smokestacks
-    g.fillRect(230, baseY - 90, 8, 40);
-
-    // Ruined apartments
-    g.fillRect(300, baseY - 60, 40, 60);
-    g.fillRect(310, baseY - 80, 25, 20);
-    // Windows (holes)
-    g.fillStyle(COLORS.skyMid, 0.3);
-    g.fillRect(308, baseY - 50, 6, 8);
-    g.fillRect(320, baseY - 50, 6, 8);
-    g.fillRect(308, baseY - 35, 6, 8);
-    g.fillRect(320, baseY - 35, 6, 8);
-
-    g.fillStyle(0x0e0e0e, 0.8);
-    // Transmission tower
-    g.fillRect(400, baseY - 100, 4, 100);
-    g.fillRect(390, baseY - 70, 24, 3);
-    g.fillRect(393, baseY - 85, 18, 3);
-    // Broken wires hanging
-    g.lineStyle(1, 0x0e0e0e, 0.4);
-    g.beginPath();
-    g.moveTo(414, baseY - 70);
-    g.lineTo(430, baseY - 50);
-    g.strokePath();
-
-    // Water tower (damaged)
-    g.fillStyle(0x0e0e0e, 0.7);
-    g.fillRect(465, baseY - 90, 3, 50);
-    g.fillRect(470, baseY - 90, 3, 50);
-    g.fillEllipse(469, baseY - 95, 20, 12);
-
-    // Fire glow behind some buildings
-    g.fillStyle(COLORS.skyFire, 0.08);
-    g.fillEllipse(190, baseY - 30, 100, 40);
-    g.fillEllipse(420, baseY - 40, 60, 30);
-  }
-
-  private drawMidGround(): void {
-    const g = this.add.graphics();
-    g.setDepth(-80);
-    const baseY = FIELD_TOP + 10;
-
-    // Closer ruins, poles, barbed wire
-    g.fillStyle(0x161210, 0.9);
-    g.fillRect(30, baseY - 30, 35, 30);   // rubble pile
-    g.fillRect(130, baseY - 20, 25, 20);
-    g.fillRect(350, baseY - 25, 30, 25);
-    g.fillRect(480, baseY - 15, 20, 15);
-
-    // Broken poles
-    g.fillStyle(0x1a1814, 0.8);
-    g.fillRect(200, baseY - 40, 3, 40);
-    g.fillRect(420, baseY - 35, 3, 35);
-
-    // Smoke wisps rising (static, atmospheric)
-    for (const sx of [100, 250, 400]) {
-      for (let i = 0; i < 5; i++) {
-        const sw = 6 + i * 2;
-        const yOff = baseY - 20 - i * 15;
-        g.fillStyle(0x333333, 0.05 - i * 0.008);
-        g.fillEllipse(sx + Math.sin(i * 1.5) * 8, yOff, sw, 8);
-      }
-    }
-
-    // Barbed wire across the field
-    g.lineStyle(1, 0x2a2822, 0.5);
-    g.beginPath();
-    for (let x = 0; x < GAME_WIDTH; x += 8) {
-      g.lineTo(x, baseY + Math.sin(x * 0.1) * 2);
-    }
-    g.strokePath();
-  }
-
-  private drawTerrain(): void {
-    const g = this.add.graphics();
-    g.setDepth(-70);
-
-    // Main ground fill
-    const groundSteps = 8;
-    const groundH = (FIELD_BOTTOM - FIELD_TOP) / groundSteps;
-    for (let i = 0; i < groundSteps; i++) {
-      const t = i / groundSteps;
-      const color = Phaser.Display.Color.Interpolate.ColorWithColor(
-        Phaser.Display.Color.IntegerToColor(COLORS.groundTop),
-        Phaser.Display.Color.IntegerToColor(COLORS.groundBot),
-        100, Math.round(t * 100)
-      );
-      g.fillStyle(Phaser.Display.Color.GetColor(color.r, color.g, color.b));
-      g.fillRect(0, FIELD_TOP + i * groundH, GAME_WIDTH, groundH + 1);
-    }
-
-    // Mud patches and craters
-    g.fillStyle(COLORS.mud, 0.3);
-    const craterPositions = [
-      { x: 150, y: 480, w: 30, h: 12 },
-      { x: 280, y: 550, w: 40, h: 15 },
-      { x: 370, y: 610, w: 25, h: 10 },
-      { x: 100, y: 630, w: 35, h: 12 },
-      { x: 440, y: 490, w: 28, h: 11 },
-    ];
-    for (const c of craterPositions) {
-      g.fillEllipse(c.x, c.y, c.w, c.h);
-    }
-
-    // Crater shadows
-    g.fillStyle(COLORS.trench, 0.4);
-    for (const c of craterPositions) {
-      g.fillEllipse(c.x, c.y + 2, c.w - 4, c.h - 3);
-    }
-
-    // Ground texture (small random marks)
-    g.fillStyle(0x1a1610, 0.2);
-    for (let i = 0; i < 40; i++) {
-      const x = Phaser.Math.Between(20, GAME_WIDTH - 20);
-      const y = Phaser.Math.Between(FIELD_TOP + 20, FIELD_BOTTOM - 10);
-      g.fillRect(x, y, Phaser.Math.Between(2, 6), Phaser.Math.Between(1, 3));
-    }
-
-    // Lane markers (subtle trenches)
-    for (const laneY of FIELD.LANES_Y) {
-      g.fillStyle(COLORS.trench, 0.15);
-      g.fillRect(70, laneY + 18, GAME_WIDTH - 140, 2);
-    }
-
-    // Foreground rubble at bottom
-    g.fillStyle(0x1e1a12, 0.6);
-    g.fillRect(0, FIELD_BOTTOM - 5, GAME_WIDTH, GAME_HEIGHT - FIELD_BOTTOM + 5);
-
-    // Bottom edge debris
-    g.fillStyle(0x2a2418, 0.5);
-    for (let i = 0; i < 15; i++) {
-      const x = Phaser.Math.Between(0, GAME_WIDTH);
-      g.fillRect(x, FIELD_BOTTOM - Phaser.Math.Between(2, 8), Phaser.Math.Between(8, 20), Phaser.Math.Between(4, 8));
-    }
+  private drawBattlefieldBackground(): void {
+    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'battlefield');
+    bg.setDepth(-100);
+    bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -297,53 +95,16 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private drawAllyBase(): void {
-    const g = this.add.graphics();
     const x = FIELD.ALLY_BASE_X;
     const cy = 550;
-    g.setDepth(100);
 
-    // Sandbag wall (3 rows)
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 3; col++) {
-        const sx = x - 20 + col * 18;
-        const sy = cy + 30 - row * 22;
-        g.fillStyle(0x6a6040, 1);
-        g.fillRoundedRect(sx, sy, 16, 12, 4);
-        g.lineStyle(1, 0x4a4030, 0.6);
-        g.strokeRoundedRect(sx, sy, 16, 12, 4);
-      }
-    }
-
-    // Wooden supports behind
-    g.fillStyle(0x5a4020);
-    g.fillRect(x - 25, cy - 50, 5, 100);
-    g.fillRect(x + 20, cy - 45, 5, 95);
-    g.fillRect(x - 25, cy - 35, 50, 4);
-
-    // Flag pole and flag
-    g.fillStyle(0x666666);
-    g.fillRect(x - 8, cy - 90, 3, 80);
-    // Simple flag (red/white stripes + blue corner)
-    const flagX = x - 5;
-    const flagY = cy - 88;
-    g.fillStyle(0xcc2233);
-    g.fillRect(flagX, flagY, 24, 16);
-    g.fillStyle(0xeeeeee);
-    g.fillRect(flagX, flagY + 3, 24, 2);
-    g.fillRect(flagX, flagY + 8, 24, 2);
-    g.fillRect(flagX, flagY + 13, 24, 2);
-    g.fillStyle(0x2244aa);
-    g.fillRect(flagX, flagY, 10, 8);
-
-    // Ammo boxes at base
-    g.fillStyle(0x4a5a3a);
-    g.fillRect(x - 18, cy + 45, 14, 10);
-    g.fillRect(x + 2, cy + 48, 12, 8);
-    g.lineStyle(1, 0x3a4a2a, 0.5);
-    g.strokeRect(x - 18, cy + 45, 14, 10);
+    // Dibujar el búnker aliado
+    const bunker = this.add.image(x, cy, 'ally-bunker');
+    bunker.setDepth(100);
+    bunker.setDisplaySize(120, 120);
 
     // HQ label
-    this.add.text(x, cy - 10, 'HQ', {
+    this.add.text(x, cy - 70, 'HQ', {
       fontFamily: FONTS.title,
       fontSize: '18px',
       color: hex(COLORS.ink),
@@ -353,70 +114,23 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private drawEnemyBase(): void {
-    const g = this.add.graphics();
     const x = FIELD.ENEMY_BASE_X;
     const cy = 550;
-    g.setDepth(100);
 
-    // Concrete bunker wall
-    g.fillStyle(0x3a3a38);
-    g.fillRect(x - 25, cy - 60, 50, 120);
-    g.fillStyle(0x2a2a28);
-    g.fillRect(x - 22, cy - 55, 44, 110);
+    // Dibujar el búnker enemigo
+    const bunker = this.add.image(x, cy, 'enemy-bunker');
+    bunker.setDepth(100);
+    bunker.setDisplaySize(120, 120);
+    bunker.setFlipX(true); // Orientar el bastión hacia la izquierda
 
-    // Cracks
-    g.lineStyle(1, 0x1a1a18, 0.8);
-    g.beginPath();
-    g.moveTo(x - 10, cy - 55);
-    g.lineTo(x - 5, cy - 30);
-    g.lineTo(x - 15, cy - 10);
-    g.strokePath();
-    g.beginPath();
-    g.moveTo(x + 10, cy - 40);
-    g.lineTo(x + 5, cy - 15);
-    g.strokePath();
-
-    // Green toxic glow from cracks
-    g.fillStyle(COLORS.serumGlow, 0.06);
-    g.fillEllipse(x - 8, cy - 30, 20, 30);
-    g.fillStyle(COLORS.serumGlow, 0.04);
-    g.fillEllipse(x + 5, cy - 20, 15, 25);
-
-    // Iron Talon banner
-    g.fillStyle(0x6a1a1a);
-    g.fillRect(x - 15, cy - 50, 30, 40);
-    g.lineStyle(1, 0x3a0a0a, 0.8);
-    g.strokeRect(x - 15, cy - 50, 30, 40);
-    // Talon symbol (simple claw marks)
-    g.lineStyle(2, 0x2a0808, 0.9);
-    for (let i = -1; i <= 1; i++) {
-      g.beginPath();
-      g.moveTo(x + i * 6, cy - 46);
-      g.lineTo(x + i * 4, cy - 16);
-      g.strokePath();
-    }
-
-    // Barbed wire on top
-    g.lineStyle(1, 0x4a4a44, 0.6);
-    g.beginPath();
-    for (let bx = x - 28; bx <= x + 28; bx += 6) {
-      g.lineTo(bx, cy - 62 + Math.sin(bx * 0.3) * 3);
-    }
-    g.strokePath();
-
-    // REICH label with glow
-    this.add.text(x, cy + 15, 'REICH', {
+    // REICH label con brillo
+    this.add.text(x, cy - 70, 'REICH', {
       fontFamily: FONTS.title,
       fontSize: '14px',
       color: hex(COLORS.serum),
       stroke: hex(0x000000),
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(101);
-
-    // Toxic drip
-    g.fillStyle(COLORS.serumGlow, 0.1);
-    g.fillRect(x - 3, cy + 55, 2, 8);
-    g.fillRect(x + 8, cy + 50, 2, 12);
   }
 
   // ═══════════════════════════════════════════════════════════

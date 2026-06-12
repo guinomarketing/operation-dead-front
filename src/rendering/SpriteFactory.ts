@@ -22,92 +22,120 @@ export class SpriteFactory {
     SpriteFactory.created = true;
 
     // ── Allied units ──
-    SpriteFactory.makeAllyTexture(scene, 'unit-rifleman', {
-      helmet: COLORS.allyHelmet,
-      uniform: COLORS.allyUniform,
-      uniformLight: COLORS.allyUniformLight,
-      weaponType: 'rifle',
-    });
-    SpriteFactory.makeAllyTexture(scene, 'unit-heavy-gunner', {
-      helmet: COLORS.allyHelmet,
-      uniform: 0x334a28,
-      uniformLight: 0x3a5230,
-      weaponType: 'mg',
-      wider: true,
-    });
-    SpriteFactory.makeAllyTexture(scene, 'unit-medic', {
-      helmet: 0xc8c8b8,
-      uniform: 0x5a6a52,
-      uniformLight: 0x6a7a62,
-      weaponType: 'pistol',
-      crossMark: true,
-    });
-    SpriteFactory.makeAllyTexture(scene, 'unit-engineer', {
-      helmet: COLORS.allyHelmet,
-      uniform: 0x6a5a3a,
-      uniformLight: 0x7a6a4a,
-      weaponType: 'pistol',
-      hasPack: true,
-    });
-    SpriteFactory.makeAllyTexture(scene, 'unit-sniper', {
-      helmet: 0x3a4a3a,
-      uniform: 0x3a4a42,
-      uniformLight: 0x4a5a52,
-      weaponType: 'sniper',
-    });
-    SpriteFactory.makeAllyTexture(scene, 'unit-flamethrower', {
-      helmet: COLORS.allyHelmet,
-      uniform: 0x5a4a2e,
-      uniformLight: 0x6a5a3e,
-      weaponType: 'flamer',
-    });
+    if (!scene.textures.exists('unit-rifleman')) {
+      SpriteFactory.makeAllyTexture(scene, 'unit-rifleman', {
+        helmet: COLORS.allyHelmet,
+        uniform: COLORS.allyUniform,
+        uniformLight: COLORS.allyUniformLight,
+        weaponType: 'rifle',
+      });
+    }
+    if (!scene.textures.exists('unit-heavy-gunner')) {
+      SpriteFactory.makeAllyTexture(scene, 'unit-heavy-gunner', {
+        helmet: COLORS.allyHelmet,
+        uniform: 0x334a28,
+        uniformLight: 0x3a5230,
+        weaponType: 'mg',
+        wider: true,
+      });
+    }
+    if (!scene.textures.exists('unit-medic')) {
+      SpriteFactory.makeAllyTexture(scene, 'unit-medic', {
+        helmet: 0xc8c8b8,
+        uniform: 0x5a6a52,
+        uniformLight: 0x6a7a62,
+        weaponType: 'pistol',
+        crossMark: true,
+      });
+    }
+    if (!scene.textures.exists('unit-engineer')) {
+      SpriteFactory.makeAllyTexture(scene, 'unit-engineer', {
+        helmet: COLORS.allyHelmet,
+        uniform: 0x6a5a3a,
+        uniformLight: 0x7a6a4a,
+        weaponType: 'pistol',
+        hasPack: true,
+      });
+    }
+    if (!scene.textures.exists('unit-sniper')) {
+      SpriteFactory.makeAllyTexture(scene, 'unit-sniper', {
+        helmet: 0x3a4a3a,
+        uniform: 0x3a4a42,
+        uniformLight: 0x4a5a52,
+        weaponType: 'sniper',
+      });
+    }
+    if (!scene.textures.exists('unit-flamethrower')) {
+      SpriteFactory.makeAllyTexture(scene, 'unit-flamethrower', {
+        helmet: COLORS.allyHelmet,
+        uniform: 0x5a4a2e,
+        uniformLight: 0x6a5a3e,
+        weaponType: 'flamer',
+      });
+    }
 
     // ── Enemy units ──
-    SpriteFactory.makeEnemyTexture(scene, 'enemy-revenant-grunt', {
-      tier: 'fodder',
-      color: COLORS.enemyUniform,
-    });
-    SpriteFactory.makeEnemyTexture(scene, 'enemy-runner-corpse', {
-      tier: 'fast',
-      color: 0x5a3a2a,
-      leaning: true,
-    });
-    SpriteFactory.makeEnemyTexture(scene, 'enemy-shielded-revenant', {
-      tier: 'armored',
-      color: 0x4a4a4a,
-      hasShield: true,
-    });
-    SpriteFactory.makeEnemyTexture(scene, 'enemy-exploder', {
-      tier: 'special',
-      color: 0x6a3a1a,
-      glowing: true,
-    });
-    SpriteFactory.makeEnemyTexture(scene, 'enemy-dead-officer', {
-      tier: 'elite',
-      color: 0x3a3a3a,
-      hasCap: true,
-    });
-    SpriteFactory.makeEnemyTexture(scene, 'enemy-occultist', {
-      tier: 'elite',
-      color: 0x2a1a2a,
-      hooded: true,
-    });
-    SpriteFactory.makeEnemyTexture(scene, 'enemy-panzer-corpse', {
-      tier: 'miniboss',
-      color: 0x4a4a42,
-      wider: true,
-    });
-    SpriteFactory.makeEnemyTexture(scene, 'enemy-rot-hound', {
-      tier: 'fast',
-      color: 0x5a4a3a,
-      quadruped: true,
-    });
+    if (!scene.textures.exists('enemy-revenant-grunt')) {
+      SpriteFactory.makeEnemyTexture(scene, 'enemy-revenant-grunt', {
+        tier: 'fodder',
+        color: COLORS.enemyUniform,
+      });
+    }
+    if (!scene.textures.exists('enemy-runner-corpse')) {
+      SpriteFactory.makeEnemyTexture(scene, 'enemy-runner-corpse', {
+        tier: 'fast',
+        color: 0x5a3a2a,
+        leaning: true,
+      });
+    }
+    if (!scene.textures.exists('enemy-shielded-revenant')) {
+      SpriteFactory.makeEnemyTexture(scene, 'enemy-shielded-revenant', {
+        tier: 'armored',
+        color: 0x4a4a4a,
+        hasShield: true,
+      });
+    }
+    if (!scene.textures.exists('enemy-exploder')) {
+      SpriteFactory.makeEnemyTexture(scene, 'enemy-exploder', {
+        tier: 'special',
+        color: 0x6a3a1a,
+        glowing: true,
+      });
+    }
+    if (!scene.textures.exists('enemy-dead-officer')) {
+      SpriteFactory.makeEnemyTexture(scene, 'enemy-dead-officer', {
+        tier: 'elite',
+        color: 0x3a3a3a,
+        hasCap: true,
+      });
+    }
+    if (!scene.textures.exists('enemy-occultist')) {
+      SpriteFactory.makeEnemyTexture(scene, 'enemy-occultist', {
+        tier: 'elite',
+        color: 0x2a1a2a,
+        hooded: true,
+      });
+    }
+    if (!scene.textures.exists('enemy-panzer-corpse')) {
+      SpriteFactory.makeEnemyTexture(scene, 'enemy-panzer-corpse', {
+        tier: 'miniboss',
+        color: 0x4a4a42,
+        wider: true,
+      });
+    }
+    if (!scene.textures.exists('enemy-rot-hound')) {
+      SpriteFactory.makeEnemyTexture(scene, 'enemy-rot-hound', {
+        tier: 'fast',
+        color: 0x5a4a3a,
+        quadruped: true,
+      });
+    }
 
     // ── Particle textures ──
-    SpriteFactory.makeParticleTexture(scene, 'particle-circle', COLORS.textWhite);
-    SpriteFactory.makeParticleTexture(scene, 'particle-ember', COLORS.ember);
-    SpriteFactory.makeParticleTexture(scene, 'particle-ash', COLORS.ash);
-    SpriteFactory.makeParticleTexture(scene, 'particle-blood', COLORS.blood);
+    if (!scene.textures.exists('particle-circle')) SpriteFactory.makeParticleTexture(scene, 'particle-circle', COLORS.textWhite);
+    if (!scene.textures.exists('particle-ember')) SpriteFactory.makeParticleTexture(scene, 'particle-ember', COLORS.ember);
+    if (!scene.textures.exists('particle-ash')) SpriteFactory.makeParticleTexture(scene, 'particle-ash', COLORS.ash);
+    if (!scene.textures.exists('particle-blood')) SpriteFactory.makeParticleTexture(scene, 'particle-blood', COLORS.blood);
   }
 
   /** Devuelve la key de textura para un defId dado. */
@@ -505,6 +533,82 @@ export class SpriteFactory {
     ctx.beginPath();
     ctx.arc(PARTICLE_SIZE / 2, PARTICLE_SIZE / 2, PARTICLE_SIZE / 2 - 1, 0, Math.PI * 2);
     ctx.fill();
+    canvas.refresh();
+  }
+
+  /**
+   * Toma una textura de imagen cruda con fondo oscuro y la procesa para remover el fondo negro,
+   * haciendo que el fondo sea transparente mediante un algoritmo de flood-fill.
+   */
+  static processTransparentTexture(scene: Phaser.Scene, sourceKey: string, targetKey: string): void {
+    if (!scene.textures.exists(sourceKey)) {
+      console.warn(`Source texture ${sourceKey} not found for transparency processing`);
+      return;
+    }
+    const texture = scene.textures.get(sourceKey);
+    const sourceImage = texture.getSourceImage() as HTMLImageElement;
+    const w = sourceImage.width;
+    const h = sourceImage.height;
+
+    // Crear canvas temporal
+    const canvas = scene.textures.createCanvas(targetKey, w, h);
+    if (!canvas) return;
+    const ctx = canvas.getContext();
+    ctx.drawImage(sourceImage, 0, 0);
+
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+
+    // Flood fill / BFS para encontrar píxeles de fondo
+    const visited = new Uint8Array(w * h);
+    const queue: number[] = [];
+
+    // Agregar bordes a la cola de procesamiento
+    for (let x = 0; x < w; x++) {
+      queue.push(x, 0);
+      queue.push(x, h - 1);
+      visited[x] = 1;
+      visited[(h - 1) * w + x] = 1;
+    }
+    for (let y = 1; y < h - 1; y++) {
+      queue.push(0, y);
+      queue.push(w - 1, y);
+      visited[y * w] = 1;
+      visited[y * w + (w - 1)] = 1;
+    }
+
+    let head = 0;
+    while (head < queue.length) {
+      const cx = queue[head++];
+      const cy = queue[head++];
+
+      const idx = (cy * w + cx) * 4;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+
+      // Verificar si es cercano a negro (r, g, b menores a 45)
+      if (r < 45 && g < 45 && b < 45) {
+        data[idx + 3] = 0; // Píxel transparente
+
+        // Agregar vecinos (4 direcciones)
+        const dx = [0, 0, 1, -1];
+        const dy = [1, -1, 0, 0];
+        for (let i = 0; i < 4; i++) {
+          const nx = cx + dx[i];
+          const ny = cy + dy[i];
+          if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+            const nidx = ny * w + nx;
+            if (visited[nidx] === 0) {
+              visited[nidx] = 1;
+              queue.push(nx, ny);
+            }
+          }
+        }
+      }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
     canvas.refresh();
   }
 }
