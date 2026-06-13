@@ -99,8 +99,8 @@ export class BattleSystem {
       const bossDef = BOSS_INDEX['general-eisenfaust'];
       this.enemyBaseHp = bossDef.stats.maxHp;
       this.enemyBaseMaxHp = bossDef.stats.maxHp;
-      // Spawn General Eisenfaust on lane 1 (center lane) at enemy spawn position
-      this.spawnBoss('general-eisenfaust', 1);
+      // Spawn General Eisenfaust en el carril central (en posición de spawn enemigo)
+      this.spawnBoss('general-eisenfaust', FIELD.CENTER_LANE);
     } else {
       this.enemyBaseHp = BASES.ENEMY_BASTION_HP;
       this.enemyBaseMaxHp = BASES.ENEMY_BASTION_HP;

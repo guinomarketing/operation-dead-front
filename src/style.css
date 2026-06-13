@@ -22,6 +22,7 @@ html, body {
   background: #000;
   overflow: hidden;
   height: 100%;
+  width: 100%;
   font-family: var(--font-body);
   color: var(--text-main);
   user-select: none;
@@ -29,16 +30,28 @@ html, body {
   touch-action: none;
 }
 
-/* Contenedor Maestro para mantener el aspecto Portrait (Móvil) en monitores anchos */
-#app-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  max-width: 54vh; /* Mantiene la proporción aproximada 540x960 en pantallas anchas (9/16) */
-  margin: 0 auto;
+body {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+/*
+ * Contenedor Maestro LANDSCAPE 16:9.
+ * Se bloquea a 16:9 y ocupa lo máximo posible del viewport (con safe-area en notch).
+ * El canvas de Phaser (Scale.FIT) y la capa de UI (DOM) comparten exactamente
+ * este rectángulo, así la UI nunca se desalinea del juego.
+ */
+#app-container {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: min(100vw, 177.78vh); /* 16/9 * 100vh */
+  height: auto;
+  max-height: 100vh;
+  /* Safe areas para celulares con notch en landscape */
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  box-sizing: border-box;
 }
 
 /* El Canvas de Phaser se adaptará a este espacio y centrará automáticamente */
@@ -131,10 +144,11 @@ html, body {
 
 #main-menu-ui h1 {
   font-family: var(--font-title);
-  font-size: 4rem;
-  margin-bottom: 2rem;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  margin: 0 0 1.2rem 0;
   text-align: center;
   color: #fff;
   text-shadow: 4px 4px 0px var(--primary-dark);
   letter-spacing: 2px;
+  line-height: 1.05;
 }

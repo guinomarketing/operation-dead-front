@@ -83,15 +83,23 @@ export class MapScene extends Phaser.Scene {
     dec.lineBetween(GAME_WIDTH - 80, GAME_HEIGHT, GAME_WIDTH, GAME_HEIGHT - 80);
   }
 
-  private getXCoord(col: number): number {
-    if (col === 0) return 130;
-    if (col === 2) return 410;
-    return 270; // centro
+  /**
+   * LANDSCAPE: la run progresa de IZQUIERDA → DERECHA.
+   * X = fila (avance de la run). Y = columna (carril/ruta).
+   */
+  private nodeX(row: number): number {
+    const leftPad = 95;
+    const rightPad = 95;
+    const maxRow = Math.max(1, ...this.mapDef.nodes.map((n) => n.row));
+    const step = (GAME_WIDTH - leftPad - rightPad) / maxRow;
+    return leftPad + row * step;
   }
 
-  private getYCoord(row: number): number {
-    // Distribuido desde Y=790 (Fila 0) hasta Y=190 (Fila 8)
-    return 790 - row * 75;
+  private nodeY(col: number): number {
+    // 3 rutas verticales dentro de la banda visible (debajo de la barra superior).
+    if (col === 0) return 170; // ruta superior
+    if (col === 2) return 430; // ruta inferior
+    return 300; // ruta central
   }
 
   private drawMapGraph(): void {
@@ -101,14 +109,14 @@ export class MapScene extends Phaser.Scene {
     
     // 1. Dibujar líneas de conexión primero (quedan detrás de los nodos)
     nodes.forEach(n => {
-      const sx = this.getXCoord(n.col);
-      const sy = this.getYCoord(n.row);
+      const sx = this.nodeX(n.row);
+      const sy = this.nodeY(n.col);
 
       n.edges.forEach(edgeId => {
         const destNode = nodes.find(dn => dn.id === edgeId);
         if (destNode) {
-          const dx = this.getXCoord(destNode.col);
-          const dy = this.getYCoord(destNode.row);
+          const dx = this.nodeX(destNode.row);
+          const dy = this.nodeY(destNode.col);
 
           // Línea de metal punteada o gruesa
           const isAvailable = this.isNodeSelectable(destNode.id, destNode.row);
@@ -130,8 +138,8 @@ export class MapScene extends Phaser.Scene {
 
     // 2. Dibujar nodos interactivos
     nodes.forEach(n => {
-      const x = this.getXCoord(n.col);
-      const y = this.getYCoord(n.row);
+      const x = this.nodeX(n.row);
+      const y = this.nodeY(n.col);
       const isSelectable = this.isNodeSelectable(n.id, n.row);
       const isVisited = this.runState.visitedNodeIds.includes(n.id);
       const isCurrent = this.runState.currentNodeId === n.id;
@@ -407,11 +415,12 @@ export class MapScene extends Phaser.Scene {
     const modal = document.createElement('div');
     modal.className = 'glass-panel';
     modal.style.position = 'absolute';
-    modal.style.top = '150px';
+    modal.style.top = '50%';
     modal.style.left = '50%';
-    modal.style.transform = 'translateX(-50%)';
-    modal.style.width = '88%';
-    modal.style.maxHeight = '620px';
+    modal.style.transform = 'translate(-50%, -50%)';
+    modal.style.width = 'min(90%, 700px)';
+    modal.style.maxHeight = '88%';
+    modal.style.overflowY = 'auto';
     modal.style.padding = '20px';
     modal.style.boxSizing = 'border-box';
     modal.style.display = 'flex';
@@ -520,10 +529,12 @@ export class MapScene extends Phaser.Scene {
     const modal = document.createElement('div');
     modal.className = 'glass-panel';
     modal.style.position = 'absolute';
-    modal.style.top = '150px';
+    modal.style.top = '50%';
     modal.style.left = '50%';
-    modal.style.transform = 'translateX(-50%)';
-    modal.style.width = '88%';
+    modal.style.transform = 'translate(-50%, -50%)';
+    modal.style.width = 'min(90%, 700px)';
+    modal.style.maxHeight = '88%';
+    modal.style.overflowY = 'auto';
     modal.style.padding = '20px';
     modal.style.boxSizing = 'border-box';
     modal.style.display = 'flex';
@@ -675,10 +686,12 @@ export class MapScene extends Phaser.Scene {
     const modal = document.createElement('div');
     modal.className = 'glass-panel';
     modal.style.position = 'absolute';
-    modal.style.top = '180px';
+    modal.style.top = '50%';
     modal.style.left = '50%';
-    modal.style.transform = 'translateX(-50%)';
-    modal.style.width = '88%';
+    modal.style.transform = 'translate(-50%, -50%)';
+    modal.style.width = 'min(90%, 720px)';
+    modal.style.maxHeight = '88%';
+    modal.style.overflowY = 'auto';
     modal.style.padding = '20px';
     modal.style.boxSizing = 'border-box';
     modal.style.display = 'flex';
@@ -962,10 +975,10 @@ export class MapScene extends Phaser.Scene {
     const modal = document.createElement('div');
     modal.className = 'glass-panel';
     modal.style.position = 'absolute';
-    modal.style.top = '250px';
+    modal.style.top = '50%';
     modal.style.left = '50%';
-    modal.style.transform = 'translateX(-50%)';
-    modal.style.width = '88%';
+    modal.style.transform = 'translate(-50%, -50%)';
+    modal.style.width = 'min(90%, 600px)';
     modal.style.padding = '30px 20px';
     modal.style.boxSizing = 'border-box';
     modal.style.display = 'flex';

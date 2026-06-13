@@ -85,14 +85,14 @@ export class ResultScene extends Phaser.Scene {
 
     // Title
     const titleText = won ? (this.nodeType === 'boss' ? 'BÚNKER DESTRUIDO' : 'VICTORIA') : 'TRINCHERA CAÍDA';
-    const title = this.add.text(cx, 240, titleText, {
+    const title = this.add.text(cx, 100, titleText, {
       fontFamily: FONTS.title,
-      fontSize: '46px',
+      fontSize: '44px',
       color: won ? hex(COLORS.gold) : hex(COLORS.hpBad),
       shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 8, fill: true }
     }).setOrigin(0.5).setAlpha(0);
 
-    this.tweens.add({ targets: title, alpha: 1, y: 220, duration: 800, delay });
+    this.tweens.add({ targets: title, alpha: 1, y: 84, duration: 800, delay });
     delay += 400;
 
     // Subtitle
@@ -100,9 +100,9 @@ export class ResultScene extends Phaser.Scene {
       ? (this.nodeType === 'boss' ? 'El mando de la secta ha caído. El sector está asegurado.' : 'La línea resistió. Los muertos vuelven a la tierra.') 
       : 'Los muertos rompieron el frente. La trinchera colapsó.';
       
-    const sub = this.add.text(cx, 290, subText, {
+    const sub = this.add.text(cx, 135, subText, {
       fontFamily: FONTS.body,
-      fontSize: '18px',
+      fontSize: '17px',
       color: won ? hex(COLORS.ink) : hex(COLORS.inkDim),
       align: 'center',
       fontStyle: 'italic',
@@ -116,10 +116,10 @@ export class ResultScene extends Phaser.Scene {
     const sep = this.add.graphics().setAlpha(0);
     sep.lineStyle(1, won ? COLORS.goldDark : COLORS.enemy, 0.5);
     sep.beginPath();
-    sep.moveTo(cx - 150, 340);
-    sep.lineTo(cx + 150, 340);
+    sep.moveTo(cx - 180, 170);
+    sep.lineTo(cx + 180, 170);
     sep.strokePath();
-    
+
     this.tweens.add({ targets: sep, alpha: 1, duration: 600, delay });
     delay += 300;
 
@@ -132,13 +132,13 @@ export class ResultScene extends Phaser.Scene {
       }
     } else {
       this.time.delayedCall(delay, () => {
-        this.makeButton(cx, 580, 'MENÚ PRINCIPAL', () => this.transition('MainMenu'), COLORS.metalDark);
+        this.makeButton(cx, 410, 'MENÚ PRINCIPAL', () => this.transition('MainMenu'), COLORS.metalDark);
       });
     }
   }
 
   private showRewards(cx: number, delay: number): void {
-    const title = this.add.text(cx, 370, 'ELEGÍ UNA RECOMPENSA', {
+    const title = this.add.text(cx, 205, 'ELEGÍ UNA RECOMPENSA', {
       fontFamily: FONTS.title,
       fontSize: '22px',
       color: hex(COLORS.gold),
@@ -146,21 +146,21 @@ export class ResultScene extends Phaser.Scene {
     }).setOrigin(0.5).setAlpha(0);
 
     this.tweens.add({ targets: title, alpha: 1, duration: 600, delay });
-    
+
     const pool = ['barracks-1', 'armory-1', 'med-tent-1', 'engineering-bay-1', 'war-room-1'];
     const picked = Phaser.Utils.Array.Shuffle(pool).slice(0, 3);
-    
+
     const containers: Phaser.GameObjects.Container[] = [];
     const zones: Phaser.GameObjects.Zone[] = [];
-    
+
     picked.forEach((upId, index) => {
       const up = UPGRADE_INDEX[upId];
       if (!up) return;
-      
-      const x = cx + (index - 1) * 150;
-      const y = 500;
-      const w = 130;
-      const h = 180;
+
+      const x = cx + (index - 1) * 185;
+      const y = 320;
+      const w = 150;
+      const h = 160;
       
       const container = this.add.container(x, y);
       
@@ -242,9 +242,9 @@ export class ResultScene extends Phaser.Scene {
             containers.forEach(c => c.destroy());
             title.destroy();
             
-            // Show continuation buttons
-            this.makeButton(cx, 540, 'VOLVER AL MAPA', () => this.transition('Map'), COLORS.allyBase);
-            this.makeButton(cx, 640, 'MENÚ PRINCIPAL', () => this.transition('MainMenu'), COLORS.metalDark);
+            // Show continuation buttons (lado a lado en landscape)
+            this.makeButton(cx - 150, 460, 'VOLVER AL MAPA', () => this.transition('Map'), COLORS.allyBase);
+            this.makeButton(cx + 150, 460, 'MENÚ PRINCIPAL', () => this.transition('MainMenu'), COLORS.metalDark);
           }
         });
       });
@@ -255,7 +255,7 @@ export class ResultScene extends Phaser.Scene {
   private showCampaignVictory(cx: number, delay: number): void {
     const runState = this.game.registry.get('runState');
     const opName = runState && runState.operationId ? (runState.operationId === 'op-first-light' ? 'OPERACIÓN VIENTO BLANCO' : (runState.operationId === 'op-hollow-town' ? 'OPERACIÓN PUEBLO FANTASMA' : 'OPERACIÓN FUNDICIÓN NEGRA')) : 'CAMPAÑA COMPLETADA';
-    const title = this.add.text(cx, 370, opName, {
+    const title = this.add.text(cx, 200, opName, {
       fontFamily: FONTS.title,
       fontSize: '24px',
       color: hex(COLORS.gold),
@@ -265,7 +265,7 @@ export class ResultScene extends Phaser.Scene {
     const bossName = runState && runState.operationId === 'op-first-light' ? 'El Coronel Von Grüber' : (runState && runState.operationId === 'op-hollow-town' ? 'El Doctor Von Totenkopf' : 'La Locomotora Profanadora');
     const descText = `${bossName} ha sido derrotado. Las fuerzas de la secta se dispersan\nen retirada. La Patagonia está a salvo... por ahora.\n\nCompletaste la operación con éxito.`;
 
-    const desc = this.add.text(cx, 440, descText, {
+    const desc = this.add.text(cx, 290, descText, {
       fontFamily: FONTS.body,
       fontSize: '14px',
       color: '#fff',
@@ -288,7 +288,7 @@ export class ResultScene extends Phaser.Scene {
         }
         this.game.registry.set('runState', runState);
       }
-      this.makeButton(cx, 570, 'MENÚ PRINCIPAL', () => this.transition('MainMenu'), COLORS.allyBase);
+      this.makeButton(cx, 460, 'MENÚ PRINCIPAL', () => this.transition('MainMenu'), COLORS.allyBase);
     });
   }
 

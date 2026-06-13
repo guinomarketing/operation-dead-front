@@ -31,48 +31,47 @@ export class BattleUI {
 
   private build() {
     this.container.innerHTML = '';
-    
-    // Contenedor del HUD superior (Glassmorphism / Panel Militar)
+
+    // ─────────────────────────────────────────────────────────
+    //  TOP HUD (landscape): Base Argentina · Moral/Suministros · Búnker
+    // ─────────────────────────────────────────────────────────
     const topHud = document.createElement('div');
     topHud.className = 'glass-panel';
     topHud.style.position = 'absolute';
-    topHud.style.top = '10px';
+    topHud.style.top = '8px';
     topHud.style.left = '50%';
     topHud.style.transform = 'translateX(-50%)';
-    topHud.style.width = '96%';
-    topHud.style.padding = '8px 16px';
+    topHud.style.width = '97%';
+    topHud.style.padding = '6px 14px';
     topHud.style.display = 'flex';
     topHud.style.justifyContent = 'space-between';
     topHud.style.alignItems = 'center';
     topHud.style.boxSizing = 'border-box';
-    
-    // Izquierda: Suministros, Kills y Moral
-    const statsDiv = document.createElement('div');
-    statsDiv.style.display = 'flex';
-    statsDiv.style.alignItems = 'center';
-    statsDiv.style.gap = '15px';
 
-    const suppliesDiv = document.createElement('div');
-    suppliesDiv.innerHTML = `<span style="color:#aaa; font-size:11px; font-weight:bold; letter-spacing:1px;">SUMINISTROS</span><br/>`;
-    this.suppliesEl = document.createElement('span');
-    this.suppliesEl.style.fontSize = '20px';
-    this.suppliesEl.style.fontFamily = 'var(--font-title)';
-    this.suppliesEl.innerText = '0';
-    suppliesDiv.appendChild(this.suppliesEl);
+    // ── IZQUIERDA: HP Base Argentina ──
+    const leftCluster = document.createElement('div');
+    leftCluster.style.display = 'flex';
+    leftCluster.style.alignItems = 'center';
+    leftCluster.style.gap = '10px';
+    leftCluster.style.minWidth = '160px';
 
-    const killsDiv = document.createElement('div');
-    killsDiv.innerHTML = `<span style="color:#aaa; font-size:11px; font-weight:bold; letter-spacing:1px;">BAJAS</span><br/>`;
-    this.killsEl = document.createElement('span');
-    this.killsEl.style.fontSize = '20px';
-    this.killsEl.style.fontFamily = 'var(--font-title)';
-    this.killsEl.innerText = '0';
-    killsDiv.appendChild(this.killsEl);
+    const allyDiv = this.createHpBar('🇦🇷 BASE ARGENTINA', '#3b82f6');
+    this.allyHpBarInner = allyDiv.barInner;
+    this.allyHpText = allyDiv.text;
+    allyDiv.container.style.width = '160px';
+    leftCluster.appendChild(allyDiv.container);
 
-    // Barra de Moral
+    // ── CENTRO: Moral + Suministros + Bajas ──
+    const centerCluster = document.createElement('div');
+    centerCluster.style.display = 'flex';
+    centerCluster.style.alignItems = 'center';
+    centerCluster.style.gap = '18px';
+
+    // Moral
     const moraleDiv = document.createElement('div');
-    moraleDiv.style.width = '100px';
-    moraleDiv.innerHTML = `<span style="color:#eab308; font-size:11px; font-weight:bold; letter-spacing:1px;">MORAL</span><br/>`;
-    
+    moraleDiv.style.width = '120px';
+    moraleDiv.innerHTML = `<span style="color:#eab308; font-size:10px; font-weight:bold; letter-spacing:1px;">MORAL</span>`;
+
     const moraleBarBg = document.createElement('div');
     moraleBarBg.style.width = '100%';
     moraleBarBg.style.height = '12px';
@@ -82,13 +81,13 @@ export class BattleUI {
     moraleBarBg.style.border = '1px solid rgba(255,255,255,0.2)';
     moraleBarBg.style.position = 'relative';
     moraleBarBg.style.marginTop = '2px';
-    
+
     this.moraleBarInner = document.createElement('div');
     this.moraleBarInner.style.height = '100%';
-    this.moraleBarInner.style.width = '70%'; // inicia en 70
+    this.moraleBarInner.style.width = '70%';
     this.moraleBarInner.style.backgroundColor = '#fbbf24';
     this.moraleBarInner.style.transition = 'width 0.3s ease, background-color 0.3s ease';
-    
+
     this.moraleText = document.createElement('div');
     this.moraleText.style.position = 'absolute';
     this.moraleText.style.width = '100%';
@@ -99,138 +98,99 @@ export class BattleUI {
     this.moraleText.style.lineHeight = '12px';
     this.moraleText.style.color = '#fff';
     this.moraleText.innerText = '70/100';
-    
+
     moraleBarBg.appendChild(this.moraleBarInner);
     moraleBarBg.appendChild(this.moraleText);
     moraleDiv.appendChild(moraleBarBg);
 
-    statsDiv.appendChild(suppliesDiv);
-    statsDiv.appendChild(killsDiv);
-    statsDiv.appendChild(moraleDiv);
+    // Suministros
+    const suppliesDiv = document.createElement('div');
+    suppliesDiv.style.textAlign = 'center';
+    suppliesDiv.innerHTML = `<span style="color:#aaa; font-size:10px; font-weight:bold; letter-spacing:1px;">SUMINISTROS</span><br/>`;
+    this.suppliesEl = document.createElement('span');
+    this.suppliesEl.style.fontSize = '20px';
+    this.suppliesEl.style.fontFamily = 'var(--font-title)';
+    this.suppliesEl.style.color = 'var(--primary)';
+    this.suppliesEl.innerText = '0';
+    suppliesDiv.appendChild(this.suppliesEl);
 
-    // Derecha: HP de las Bases
-    const basesDiv = document.createElement('div');
-    basesDiv.style.display = 'flex';
-    basesDiv.style.gap = '15px';
+    // Bajas
+    const killsDiv = document.createElement('div');
+    killsDiv.style.textAlign = 'center';
+    killsDiv.innerHTML = `<span style="color:#aaa; font-size:10px; font-weight:bold; letter-spacing:1px;">BAJAS</span><br/>`;
+    this.killsEl = document.createElement('span');
+    this.killsEl.style.fontSize = '20px';
+    this.killsEl.style.fontFamily = 'var(--font-title)';
+    this.killsEl.innerText = '0';
+    killsDiv.appendChild(this.killsEl);
 
-    // Base Aliada HQ
-    const allyDiv = this.createHpBar('HQ', '#3b82f6');
-    this.allyHpBarInner = allyDiv.barInner;
-    this.allyHpText = allyDiv.text;
-    basesDiv.appendChild(allyDiv.container);
+    centerCluster.appendChild(moraleDiv);
+    centerCluster.appendChild(suppliesDiv);
+    centerCluster.appendChild(killsDiv);
 
-    // Bastión Enemigo / Boss
-    let enemyLabel = 'BÚNKER';
+    // ── DERECHA: HP Búnker enemigo ──
+    const rightCluster = document.createElement('div');
+    rightCluster.style.display = 'flex';
+    rightCluster.style.alignItems = 'center';
+    rightCluster.style.gap = '10px';
+    rightCluster.style.minWidth = '160px';
+    rightCluster.style.justifyContent = 'flex-end';
+
+    let enemyLabel = 'BÚNKER ENEMIGO';
     if (this.nodeType === 'boss') {
       const runState = this.scene.game.registry.get('runState');
       if (runState && runState.operationId === 'op-hollow-town') {
-        enemyLabel = 'TOTENKOPF';
+        enemyLabel = '☠ TOTENKOPF';
       } else if (runState && runState.operationId === 'op-iron-grave') {
-        enemyLabel = 'LOCOMOTORA';
+        enemyLabel = '☠ LOCOMOTORA';
       } else {
-        enemyLabel = 'GRÜBER';
+        enemyLabel = '☠ GRÜBER';
       }
     }
-    const enemyDiv = this.createHpBar(enemyLabel, '#ef4444');
+    const enemyDiv = this.createHpBar(enemyLabel, '#ef4444', true);
     this.enemyHpBarInner = enemyDiv.barInner;
     this.enemyHpText = enemyDiv.text;
-    basesDiv.appendChild(enemyDiv.container);
+    enemyDiv.container.style.width = '160px';
+    rightCluster.appendChild(enemyDiv.container);
 
-    topHud.appendChild(statsDiv);
-    topHud.appendChild(basesDiv);
+    topHud.appendChild(leftCluster);
+    topHud.appendChild(centerCluster);
+    topHud.appendChild(rightCluster);
 
-    // Contenedor Maestro de la Consola Inferior (Abilities + Deploy)
-    const consoleContainer = document.createElement('div');
-    consoleContainer.style.position = 'absolute';
-    consoleContainer.style.bottom = '15px';
-    consoleContainer.style.left = '50%';
-    consoleContainer.style.transform = 'translateX(-50%)';
-    consoleContainer.style.display = 'flex';
-    consoleContainer.style.flexDirection = 'column';
-    consoleContainer.style.alignItems = 'center';
-    consoleContainer.style.pointerEvents = 'none';
+    // ─────────────────────────────────────────────────────────
+    //  BOTTOM BAR (landscape): cartas de unidad IZQ · habilidades DER
+    // ─────────────────────────────────────────────────────────
+    const bottomBar = document.createElement('div');
+    bottomBar.style.position = 'absolute';
+    bottomBar.style.bottom = '8px';
+    bottomBar.style.left = '0';
+    bottomBar.style.right = '0';
+    bottomBar.style.display = 'flex';
+    bottomBar.style.justifyContent = 'space-between';
+    bottomBar.style.alignItems = 'flex-end';
+    bottomBar.style.padding = '0 14px';
+    bottomBar.style.boxSizing = 'border-box';
+    bottomBar.style.pointerEvents = 'none';
 
-    // Fila 1: Habilidades de Comandante (Artillería y Médicos)
-    const abilitiesRow = document.createElement('div');
-    abilitiesRow.style.display = 'flex';
-    abilitiesRow.style.gap = '20px';
-    abilitiesRow.style.marginBottom = '10px';
-    abilitiesRow.style.pointerEvents = 'auto';
-
-    const abilityDefs = [
-      { id: 'airstrike', label: '💥 A. AÉREO', cost: 50 },
-      { id: 'medkit', label: '✚ BOTIQUÍN', cost: 30 }
-    ];
-
-    for (const ab of abilityDefs) {
-      const btn = document.createElement('div');
-      btn.className = 'glass-panel';
-      btn.style.width = '105px';
-      btn.style.height = '40px';
-      btn.style.display = 'flex';
-      btn.style.flexDirection = 'column';
-      btn.style.alignItems = 'center';
-      btn.style.justifyContent = 'center';
-      btn.style.cursor = 'pointer';
-      btn.style.position = 'relative';
-      btn.style.overflow = 'hidden';
-      btn.style.border = '2px solid var(--panel-border)';
-      btn.style.transition = 'transform 0.1s, border-color 0.1s, box-shadow 0.1s';
-      
-      btn.onmousedown = () => btn.style.transform = 'scale(0.95)';
-      btn.onmouseup = () => { btn.style.transform = 'scale(1)'; this.onSelectAbility(ab.id); };
-      btn.onmouseleave = () => btn.style.transform = 'scale(1)';
-
-      const text = document.createElement('div');
-      text.innerText = ab.label;
-      text.style.fontSize = '11px';
-      text.style.fontWeight = 'bold';
-      text.style.color = '#fff';
-
-      const cost = document.createElement('div');
-      cost.innerText = `⬢ ${ab.cost}`;
-      cost.style.fontSize = '11px';
-      cost.style.color = 'var(--primary)';
-      cost.style.fontFamily = 'var(--font-title)';
-
-      const cdOverlay = document.createElement('div');
-      cdOverlay.style.position = 'absolute';
-      cdOverlay.style.bottom = '0';
-      cdOverlay.style.left = '0';
-      cdOverlay.style.width = '100%';
-      cdOverlay.style.height = '100%';
-      cdOverlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
-      cdOverlay.style.transformOrigin = 'bottom';
-      cdOverlay.style.transform = 'scaleY(0)';
-      cdOverlay.style.pointerEvents = 'none';
-
-      btn.appendChild(cdOverlay);
-      btn.appendChild(text);
-      btn.appendChild(cost);
-      
-      this.abilityButtons[ab.id] = { el: btn, costEl: cost, cdOverlay };
-      abilitiesRow.appendChild(btn);
-    }
-
-    // Fila 2: Cartas de Unidades
+    // ── Cartas de Unidades (izquierda) ──
     const deployRow = document.createElement('div');
     deployRow.style.display = 'flex';
-    deployRow.style.gap = '8px';
+    deployRow.style.gap = '6px';
     deployRow.style.pointerEvents = 'auto';
 
     for (const unitId of DEPLOYABLE) {
       const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
-      
+
       const card = document.createElement('div');
       card.className = 'glass-panel';
-      card.style.width = '80px';
-      card.style.height = '105px';
+      card.style.width = '74px';
+      card.style.height = '92px';
       card.style.position = 'relative';
       card.style.display = 'flex';
       card.style.flexDirection = 'column';
       card.style.alignItems = 'center';
       card.style.justifyContent = 'flex-end';
-      card.style.paddingBottom = '6px';
+      card.style.paddingBottom = '5px';
       card.style.cursor = 'pointer';
       card.style.transition = 'transform 0.1s, border-color 0.1s, box-shadow 0.1s';
       card.style.overflow = 'hidden';
@@ -239,7 +199,6 @@ export class BattleUI {
       card.onmouseup = () => { card.style.transform = 'scale(1)'; this.onSelectCard(unitId); };
       card.onmouseleave = () => card.style.transform = 'scale(1)';
 
-      // Character Icon - Extraído como Base64 desde el motor de render
       const icon = document.createElement('img');
       const textureKey = `unit-${unitId}`;
       if (this.scene.textures.exists(textureKey)) {
@@ -251,18 +210,19 @@ export class BattleUI {
       } else {
         icon.src = `/assets/sprites/unit-${unitId}.png`;
       }
-      icon.style.width = '48px';
-      icon.style.height = '48px';
+      icon.style.width = '44px';
+      icon.style.height = '44px';
       icon.style.objectFit = 'contain';
       icon.style.position = 'absolute';
-      icon.style.top = '6px';
+      icon.style.top = '5px';
       icon.style.imageRendering = 'pixelated';
 
       const name = document.createElement('div');
       name.innerText = def.name;
-      name.style.fontSize = '11px';
+      name.style.fontSize = '10px';
       name.style.fontWeight = 'bold';
       name.style.marginTop = 'auto';
+      name.style.textAlign = 'center';
 
       const cost = document.createElement('div');
       cost.innerText = `⬢ ${def.cost}`;
@@ -290,14 +250,78 @@ export class BattleUI {
       deployRow.appendChild(card);
     }
 
-    consoleContainer.appendChild(abilitiesRow);
-    consoleContainer.appendChild(deployRow);
-    
+    // ── Habilidades de Comandante (derecha) ──
+    const abilitiesRow = document.createElement('div');
+    abilitiesRow.style.display = 'flex';
+    abilitiesRow.style.gap = '10px';
+    abilitiesRow.style.alignItems = 'flex-end';
+    abilitiesRow.style.pointerEvents = 'auto';
+
+    const abilityDefs = [
+      { id: 'airstrike', label: '💥 A. AÉREO', cost: 50 },
+      { id: 'medkit', label: '✚ BOTIQUÍN', cost: 30 }
+    ];
+
+    for (const ab of abilityDefs) {
+      const btn = document.createElement('div');
+      btn.className = 'glass-panel';
+      btn.style.width = '92px';
+      btn.style.height = '60px';
+      btn.style.display = 'flex';
+      btn.style.flexDirection = 'column';
+      btn.style.alignItems = 'center';
+      btn.style.justifyContent = 'center';
+      btn.style.gap = '4px';
+      btn.style.cursor = 'pointer';
+      btn.style.position = 'relative';
+      btn.style.overflow = 'hidden';
+      btn.style.border = '2px solid var(--panel-border)';
+      btn.style.transition = 'transform 0.1s, border-color 0.1s, box-shadow 0.1s';
+
+      btn.onmousedown = () => btn.style.transform = 'scale(0.95)';
+      btn.onmouseup = () => { btn.style.transform = 'scale(1)'; this.onSelectAbility(ab.id); };
+      btn.onmouseleave = () => btn.style.transform = 'scale(1)';
+
+      const text = document.createElement('div');
+      text.innerText = ab.label;
+      text.style.fontSize = '11px';
+      text.style.fontWeight = 'bold';
+      text.style.color = '#fff';
+      text.style.textAlign = 'center';
+
+      const cost = document.createElement('div');
+      cost.innerText = `⬢ ${ab.cost}`;
+      cost.style.fontSize = '11px';
+      cost.style.color = 'var(--primary)';
+      cost.style.fontFamily = 'var(--font-title)';
+
+      const cdOverlay = document.createElement('div');
+      cdOverlay.style.position = 'absolute';
+      cdOverlay.style.bottom = '0';
+      cdOverlay.style.left = '0';
+      cdOverlay.style.width = '100%';
+      cdOverlay.style.height = '100%';
+      cdOverlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
+      cdOverlay.style.transformOrigin = 'bottom';
+      cdOverlay.style.transform = 'scaleY(0)';
+      cdOverlay.style.pointerEvents = 'none';
+
+      btn.appendChild(cdOverlay);
+      btn.appendChild(text);
+      btn.appendChild(cost);
+
+      this.abilityButtons[ab.id] = { el: btn, costEl: cost, cdOverlay };
+      abilitiesRow.appendChild(btn);
+    }
+
+    bottomBar.appendChild(deployRow);
+    bottomBar.appendChild(abilitiesRow);
+
     this.container.appendChild(topHud);
-    this.container.appendChild(consoleContainer);
+    this.container.appendChild(bottomBar);
   }
 
-  private createHpBar(label: string, color: string) {
+  private createHpBar(label: string, color: string, rightAlign = false) {
     const container = document.createElement('div');
     container.style.width = '110px';
 
@@ -307,6 +331,7 @@ export class BattleUI {
     title.style.fontWeight = 'bold';
     title.style.color = color;
     title.style.marginBottom = '2px';
+    title.style.textAlign = rightAlign ? 'right' : 'left';
 
     const barBg = document.createElement('div');
     barBg.style.width = '100%';

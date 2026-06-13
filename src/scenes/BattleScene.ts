@@ -98,6 +98,11 @@ export class BattleScene extends Phaser.Scene {
     // Camera fade in
     this.cameras.main.fadeIn(600, 0, 0, 0);
 
+    // ── Dev demo (solo pruebas): ?demo=1 despliega un escuadrón inicial ──
+    if (new URLSearchParams(window.location.search).get('demo') === '1') {
+      this.time.delayedCall(300, () => this.devDemoDeploy());
+    }
+
     if (nodeType === 'boss') {
       this.time.delayedCall(800, () => {
         this.cameras.main.flash(400, 150, 0, 0);
@@ -139,9 +144,18 @@ export class BattleScene extends Phaser.Scene {
   // ═══════════════════════════════════════════════════════════
 
   private drawBattlefieldBackground(): void {
+    // Color base por si el asset no cubre / mientras carga
+    this.cameras.main.setBackgroundColor('#0d100c');
+
     const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'battlefield');
     bg.setDepth(-100);
-    bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+    // Cover-scale: cubre la pantalla sin deformar (recorta el excedente).
+    const cover = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
+    bg.setScale(cover);
+
+    // Oscurecer ligeramente para que las unidades resalten (lectura PvZ)
+    const dim = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0a0d0a, 0.28);
+    dim.setDepth(-95);
 
     // Dibujar caminos visuales para los carriles
     const pathG = this.add.graphics();
@@ -175,17 +189,19 @@ export class BattleScene extends Phaser.Scene {
 
   private drawAllyBase(): void {
     const x = FIELD.ALLY_BASE_X;
-    const cy = 550;
+    const cy = FIELD.CENTER_Y;
+    const bw = 150;
+    const bh = 210; // estructura alta que cubre los carriles
 
-    // Dibujar el búnker aliado
+    // Dibujar el búnker / trinchera aliada (extremo izquierdo)
     const bunker = this.add.image(x, cy, 'ally-bunker');
     bunker.setDepth(100);
-    bunker.setDisplaySize(120, 120);
+    bunker.setDisplaySize(bw, bh);
 
     // HQ label
-    this.add.text(x, cy - 70, 'HQ', {
+    this.add.text(x, cy - bh / 2 - 6, 'BASE ARGENTINA', {
       fontFamily: FONTS.title,
-      fontSize: '18px',
+      fontSize: '13px',
       color: hex(COLORS.ink),
       stroke: hex(0x000000),
       strokeThickness: 3,
@@ -194,18 +210,20 @@ export class BattleScene extends Phaser.Scene {
 
   private drawEnemyBase(): void {
     const x = FIELD.ENEMY_BASE_X;
-    const cy = 550;
+    const cy = FIELD.CENTER_Y;
+    const bw = 150;
+    const bh = 210;
 
-    // Dibujar el búnker enemigo
+    // Dibujar el búnker enemigo (extremo derecho)
     const bunker = this.add.image(x, cy, 'enemy-bunker');
     bunker.setDepth(100);
-    bunker.setDisplaySize(120, 120);
+    bunker.setDisplaySize(bw, bh);
     bunker.setFlipX(true); // Orientar el bastión hacia la izquierda
 
-    // REICH label con brillo
-    this.add.text(x, cy - 70, 'REICH', {
+    // Label del búnker enemigo
+    this.add.text(x, cy - bh / 2 - 6, 'BÚNKER ENEMIGO', {
       fontFamily: FONTS.title,
-      fontSize: '14px',
+      fontSize: '13px',
       color: hex(COLORS.serum),
       stroke: hex(0x000000),
       strokeThickness: 3,
@@ -326,12 +344,11 @@ export class BattleScene extends Phaser.Scene {
 
   private handleBattlefieldClick(x: number, y: number): void {
     if (this.selectedUnitId) {
-      // Si hace click dentro de la zona de combate vertical
-      if (y >= 420 && y <= 680) {
-        let lane = 1;
-        if (y < 505) lane = 0;
-        else if (y >= 580) lane = 2;
-
+      // Zona desplegable: banda del battlefield (con un pequeño margen vertical).
+      const top = FIELD.LANES_Y[0] - 50;
+      const bottom = FIELD.LANES_Y[FIELD.LANES_Y.length - 1] + 50;
+      if (y >= top && y <= bottom) {
+        const lane = FIELD.laneFromY(y);
         this.tryDeployInLane(this.selectedUnitId, lane);
         this.selectedUnitId = null;
         this.ui.setSelectedUnit(null);
@@ -373,6 +390,24 @@ export class BattleScene extends Phaser.Scene {
       this.cooldowns.set(unitId, def.deployCooldown);
       this.spawnUnit(c);
       this.spawnDeployPuff(FIELD.SPAWN_ALLY_X, FIELD.LANES_Y[lane]);
+    }
+  }
+
+  /** Dev-only: despliega un escuadrón inicial repartido en carriles para capturas. */
+  private devDemoDeploy(): void {
+    this.sim.supplies = 400; // presupuesto de demo
+    const plan: Array<[string, number]> = [
+      ['rifleman', 0],
+      ['heavy-gunner', 1],
+      ['medic', 2],
+      ['sniper', 3],
+      ['flamethrower', 1],
+      ['rifleman', 2],
+      ['engineer', 0],
+    ];
+    for (const [unitId, lane] of plan) {
+      this.cooldowns.set(unitId, 0);
+      this.tryDeployInLane(unitId, lane);
     }
   }
 
@@ -704,8 +739,9 @@ export class BattleScene extends Phaser.Scene {
     // Process battle events for visual effects
     for (const ev of this.sim.pendingEvents) {
       if (ev.type === 'death') {
-        const ex = ev.x !== undefined ? ev.x : (ev.faction === 'enemy' ? Phaser.Math.Between(300, 480) : Phaser.Math.Between(50, 200));
-        const ey = ev.y !== undefined ? ev.y : FIELD.LANES_Y[Phaser.Math.Between(0, 2)];
+        const lastLane = FIELD.LANES_Y.length - 1;
+        const ex = ev.x !== undefined ? ev.x : (ev.faction === 'enemy' ? Phaser.Math.Between(FIELD.ENEMY_BASE_X - 250, FIELD.ENEMY_BASE_X) : Phaser.Math.Between(FIELD.ALLY_BASE_X, FIELD.ALLY_BASE_X + 250));
+        const ey = ev.y !== undefined ? ev.y : FIELD.LANES_Y[Phaser.Math.Between(0, lastLane)];
         
         if (ev.faction === 'enemy') {
           this.killCount++;
@@ -732,7 +768,8 @@ export class BattleScene extends Phaser.Scene {
         }
       }
       if (ev.type === 'bounty' && ev.amount) {
-        this.spawnBountyText(Phaser.Math.Between(350, 450), FIELD.LANES_Y[Phaser.Math.Between(0, 2)], ev.amount);
+        const lane = Phaser.Math.Between(0, FIELD.LANES_Y.length - 1);
+        this.spawnBountyText(Phaser.Math.Between(GAME_WIDTH * 0.45, GAME_WIDTH * 0.7), FIELD.LANES_Y[lane], ev.amount);
       }
       if (ev.type === 'base-hit') {
         if (ev.amount === 999) {
