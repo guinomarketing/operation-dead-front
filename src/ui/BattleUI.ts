@@ -1,4 +1,5 @@
 import { UNIT_INDEX } from '../data/units';
+import { DEPLOYABLE } from '../scenes/BattleScene';
 
 export class BattleUI {
   private container: HTMLElement;
@@ -85,10 +86,8 @@ export class BattleUI {
     bottomHud.style.display = 'flex';
     bottomHud.style.gap = '15px';
 
-    // Deployable units in MVP 0.1
-    const deployables = ['rifleman'];
-
-    for (const unitId of deployables) {
+    // Deployable units in MVP 0.2
+    for (const unitId of DEPLOYABLE) {
       const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
       
       const card = document.createElement('div');

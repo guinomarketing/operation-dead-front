@@ -1,12 +1,11 @@
 /**
  * BattleSystem — lógica de combate pura, sin Phaser.
- * La escena crea sprites y lee este estado cada frame para dibujar.
- * Coordenadas: x crece hacia la derecha. Aliados van hacia ENEMY_BASE_X,
- * enemigos hacia ALLY_BASE_X.
+ * Integra WaveSystem y lógica de habilidades/estados (MVP 0.2).
  */
 import { FIELD, BASES, ECONOMY } from '../utils/constants';
 import { UNIT_INDEX } from '../data/units';
 import { ENEMY_INDEX } from '../data/enemies';
+import { WaveSystem } from './WaveSystem';
 
 export type Faction = 'ally' | 'enemy';
 
@@ -27,12 +26,24 @@ export interface Combatant {
   alive: boolean;
   color: number;
   label: string;
+
+  // Habilidades y tags
+  tags: string[];
+  traits: string[];
+  healPower?: number;
+  healRadius?: number;
+  maxTargets?: number;
+
+  // Estados
+  slowRemaining?: number;
+  burnRemaining?: number;
+  burnTickTimer?: number;
 }
 
 export type BattleOutcome = 'ongoing' | 'won' | 'lost';
 
 export interface BattleEvent {
-  type: 'death' | 'bounty' | 'base-hit';
+  type: 'death' | 'bounty' | 'base-hit' | 'heal';
   faction?: Faction;
   amount?: number;
   defId?: string;
@@ -46,10 +57,10 @@ export class BattleSystem {
   enemyBaseMaxHp: number;
   supplies: number;
   outcome: BattleOutcome = 'ongoing';
+  waveSys: WaveSystem;
 
   private nextUid = 1;
   private incomeCarry = 0;
-  /** Eventos producidos en el último update, para que la escena reaccione (FX, contadores). */
   pendingEvents: BattleEvent[] = [];
 
   constructor(allyBaseHp = BASES.ALLY_HP) {
@@ -58,9 +69,9 @@ export class BattleSystem {
     this.enemyBaseHp = BASES.ENEMY_BASTION_HP;
     this.enemyBaseMaxHp = BASES.ENEMY_BASTION_HP;
     this.supplies = ECONOMY.STARTING_SUPPLIES;
+    this.waveSys = new WaveSystem(this);
   }
 
-  /** ¿Puede pagarse y desplegarse esta unidad ahora? (cooldown lo maneja la escena/HUD) */
   canAfford(unitId: string): boolean {
     const def = UNIT_INDEX[unitId];
     return !!def && this.supplies >= def.cost;
@@ -79,6 +90,11 @@ export class BattleSystem {
       armor: def.stats.armor,
       color: def.placeholder.color,
       label: def.placeholder.label,
+      tags: def.tags || [],
+      traits: def.traits ? def.traits.map(t => t.id) : [],
+      healPower: (def.stats as any).healPower,
+      healRadius: (def.stats as any).healRadius,
+      maxTargets: (def.stats as any).maxTargets,
     });
   }
 
@@ -94,6 +110,8 @@ export class BattleSystem {
       armor: def.stats.armor,
       color: def.placeholder.color,
       label: def.placeholder.label,
+      tags: def.tags || [],
+      traits: [],
     });
   }
 
@@ -103,7 +121,6 @@ export class BattleSystem {
     x: number,
     s: Omit<Combatant, 'uid' | 'defId' | 'faction' | 'x' | 'lane' | 'hp' | 'attackCooldown' | 'alive'>,
   ): Combatant {
-    // Reparte en el carril menos poblado para legibilidad.
     const lane = this.leastBusyLane(faction);
     const c: Combatant = {
       uid: this.nextUid++,
@@ -129,11 +146,13 @@ export class BattleSystem {
     return min;
   }
 
-  /** Avanza la simulación dtMs milisegundos. */
   update(dtMs: number): void {
     if (this.outcome !== 'ongoing') return;
     this.pendingEvents = [];
     const dt = dtMs / 1000;
+
+    // Actualizar Oleadas
+    this.waveSys.update(dtMs);
 
     // Economía
     this.incomeCarry += ECONOMY.INCOME_PER_SECOND * dt;
@@ -145,23 +164,54 @@ export class BattleSystem {
 
     for (const c of this.combatants) {
       if (!c.alive) continue;
+      
+      // Status Effects
+      if (c.slowRemaining && c.slowRemaining > 0) c.slowRemaining -= dtMs;
+      if (c.burnRemaining && c.burnRemaining > 0) {
+        c.burnRemaining -= dtMs;
+        if (c.burnTickTimer !== undefined) c.burnTickTimer -= dtMs;
+        if (c.burnTickTimer !== undefined && c.burnTickTimer <= 0) {
+           c.hp -= 3; // Burn damage
+           if (c.hp <= 0) this.kill(c, c.faction === 'ally' ? 'enemy' : 'ally');
+           c.burnTickTimer = 1000;
+        }
+      }
+      if (!c.alive) continue; // Died to burn
+
       if (c.attackCooldown > 0) c.attackCooldown -= dtMs;
 
+      // Support: Medic Healing
+      if (c.traits.includes('field-medic')) {
+        const healTarget = this.findHealTarget(c);
+        if (healTarget) {
+          if (c.attackCooldown <= 0) {
+            const amount = c.healPower || 8;
+            healTarget.hp = Math.min(healTarget.maxHp, healTarget.hp + amount);
+            c.attackCooldown = c.attackInterval;
+            this.pendingEvents.push({ type: 'heal', faction: c.faction, amount });
+          }
+          continue; // Medic stays to heal
+        }
+      }
+
+      // Normal Combat Logic
       const target = this.findTarget(c);
 
       if (target) {
         const dist = Math.abs(target.x - c.x);
         if (dist <= c.range) {
-          // En rango: atacar si el cooldown lo permite.
           if (c.attackCooldown <= 0) {
             this.dealDamage(c, target);
+            // AoE (Flamethrower)
+            if (c.traits.includes('burn') && c.maxTargets && c.maxTargets > 1) {
+              this.dealAoEDamage(c, target);
+            }
             c.attackCooldown = c.attackInterval;
           }
         } else {
           this.advance(c, dt);
         }
       } else {
-        // Sin objetivo: avanzar hacia la base enemiga / atacarla.
         if (this.atEnemyBase(c)) {
           this.hitBase(c);
           c.attackCooldown = c.attackInterval;
@@ -171,15 +221,14 @@ export class BattleSystem {
       }
     }
 
-    // Limpiar muertos del array (la escena ya recibió los eventos 'death').
     this.combatants = this.combatants.filter((c) => c.alive);
-
     this.checkOutcome();
   }
 
   private advance(c: Combatant, dt: number): void {
     const dir = c.faction === 'ally' ? 1 : -1;
-    c.x += dir * c.moveSpeed * dt;
+    const speed = (c.slowRemaining && c.slowRemaining > 0) ? c.moveSpeed * 0.85 : c.moveSpeed;
+    c.x += dir * speed * dt;
   }
 
   private atEnemyBase(c: Combatant): boolean {
@@ -187,18 +236,49 @@ export class BattleSystem {
     return c.x <= FIELD.ALLY_BASE_X + 10;
   }
 
-  /** Objetivo enemigo más cercano en el mismo carril (o adyacente) y por delante. */
   private findTarget(c: Combatant): Combatant | null {
     let best: Combatant | null = null;
     let bestDist = Infinity;
+    
+    let priorityTarget = false;
+    const isSniper = c.traits.includes('priority-elite');
+
     for (const o of this.combatants) {
       if (!o.alive || o.faction === c.faction) continue;
+      if (Math.abs(o.lane - c.lane) > 1) continue; // Same or adjacent lane
+      const dist = Math.abs(o.x - c.x);
+      
+      if (dist <= c.range + 40) {
+        if (isSniper && o.tags.includes('elite')) {
+          if (!priorityTarget || dist < bestDist) {
+            bestDist = dist;
+            best = o;
+            priorityTarget = true;
+          }
+        } else if (!priorityTarget && dist < bestDist) {
+          bestDist = dist;
+          best = o;
+        }
+      }
+    }
+    return best;
+  }
+
+  private findHealTarget(c: Combatant): Combatant | null {
+    let best: Combatant | null = null;
+    let lowestHp = Infinity;
+    const healRadius = c.healRadius || 90;
+    
+    for (const o of this.combatants) {
+      if (!o.alive || o.faction !== c.faction || o.uid === c.uid) continue;
       if (Math.abs(o.lane - c.lane) > 1) continue;
       const dist = Math.abs(o.x - c.x);
-      // Solo objetivos dentro de un alcance de detección razonable (range + margen de avance).
-      if (dist <= c.range + 40 && dist < bestDist) {
-        bestDist = dist;
-        best = o;
+      
+      if (dist <= healRadius && o.hp < o.maxHp) {
+        if (o.hp < lowestHp) {
+          lowestHp = o.hp;
+          best = o;
+        }
       }
     }
     return best;
@@ -207,14 +287,40 @@ export class BattleSystem {
   private dealDamage(attacker: Combatant, target: Combatant): void {
     const dmg = Math.max(1, attacker.damage - target.armor);
     target.hp -= dmg;
+    
+    // Suppression Slow
+    if (attacker.traits.includes('suppress')) {
+      target.slowRemaining = 2000;
+    }
+    // Incendiary Burn
+    if (attacker.traits.includes('burn')) {
+      target.burnRemaining = 2000;
+      target.burnTickTimer = 1000;
+    }
+
     if (target.hp <= 0) this.kill(target, attacker.faction);
+  }
+
+  private dealAoEDamage(attacker: Combatant, primaryTarget: Combatant): void {
+    let hitCount = 1;
+    const maxHits = attacker.maxTargets || 1;
+    for (const o of this.combatants) {
+      if (hitCount >= maxHits) break;
+      if (!o.alive || o.faction === attacker.faction || o.uid === primaryTarget.uid) continue;
+      if (Math.abs(o.lane - primaryTarget.lane) > 1) continue;
+      
+      const dist = Math.abs(o.x - primaryTarget.x);
+      if (dist <= 40) { // AoE radius
+        this.dealDamage(attacker, o);
+        hitCount++;
+      }
+    }
   }
 
   private kill(c: Combatant, killerFaction: Faction): void {
     if (!c.alive) return;
     c.alive = false;
     this.pendingEvents.push({ type: 'death', faction: c.faction, defId: c.defId });
-    // Recompensa: el aliado cobra bounty al matar enemigos.
     if (c.faction === 'enemy' && killerFaction === 'ally') {
       const def = ENEMY_INDEX[c.defId];
       const bounty = def?.bounty ?? 0;

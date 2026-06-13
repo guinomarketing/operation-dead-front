@@ -4,7 +4,7 @@
  * visual de calidad producción mobile.
  */
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, FIELD, SPAWN_MVP01 } from '../utils/constants';
+import { GAME_WIDTH, GAME_HEIGHT, FIELD } from '../utils/constants';
 import { COLORS, hex, FONTS } from '../ui/colors';
 import { BattleSystem, type Combatant } from '../systems/BattleSystem';
 import { UNIT_INDEX } from '../data/units';
@@ -13,17 +13,14 @@ import { UnitRenderer } from '../rendering/UnitRenderer';
 import { BattleUI } from '../ui/BattleUI';
 
 // ── Layout constants ──────────────────────────────────────
-const HUD_HEIGHT = 110;
-const DEPLOY_PANEL_TOP = GAME_HEIGHT - 200;
 
-/** Unidades desplegables en MVP 0.1 */
-const DEPLOYABLE = ['rifleman'] as const;
+/** Unidades desplegables en MVP 0.2 */
+export const DEPLOYABLE = ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower'] as const;
 
 export class BattleScene extends Phaser.Scene {
   private sim!: BattleSystem;
   private renderers = new Map<number, UnitRenderer>();
 
-  private gruntTimer = 0;
   private cooldowns = new Map<string, number>();
   private killCount = 0;
 
@@ -43,7 +40,6 @@ export class BattleScene extends Phaser.Scene {
     this.renderers.clear();
     this.cooldowns.clear();
     this.killCount = 0;
-    this.gruntTimer = 0;
 
     // Generate all textures
     SpriteFactory.ensureTextures(this);
@@ -343,13 +339,11 @@ export class BattleScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (this.sim.outcome !== 'ongoing') return;
 
-    // Spawn Revenant Grunts
-    this.gruntTimer += delta;
-    if (this.gruntTimer >= SPAWN_MVP01.GRUNT_INTERVAL_MS) {
-      this.gruntTimer -= SPAWN_MVP01.GRUNT_INTERVAL_MS;
-      const e = this.sim.spawnEnemy('revenant-grunt');
-      if (e) this.spawnUnit(e);
-    }
+    // Sincronizar combatientes
+    this.syncUnits(delta);
+
+    // Refrescar HUD
+    this.refreshHud();
 
     // Cooldowns
     for (const [id, ms] of this.cooldowns) {
