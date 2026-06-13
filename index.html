@@ -13,32 +13,18 @@
       href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Roboto+Condensed:wght@300;400;700&display=swap"
       rel="stylesheet"
     />
-    <style>
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        background: #0a0c0a;
-        overflow: hidden;
-        height: 100%;
-        font-family: system-ui, sans-serif;
-        -webkit-tap-highlight-color: transparent;
-        touch-action: none;
-      }
-      #game {
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      canvas {
-        display: block;
-      }
-    </style>
+    <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <div id="game"></div>
+    <!-- Contenedor maestro para alinear perfectamente la UI y el Juego -->
+    <div id="app-container">
+      <!-- Capa del Juego (WebGL/Canvas) -->
+      <div id="game"></div>
+      
+      <!-- Capa de la Interfaz (HTML/CSS) -->
+      <div id="ui-layer"></div>
+    </div>
+    
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

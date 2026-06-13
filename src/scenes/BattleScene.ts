@@ -10,6 +10,7 @@ import { BattleSystem, type Combatant } from '../systems/BattleSystem';
 import { UNIT_INDEX } from '../data/units';
 import { SpriteFactory } from '../rendering/SpriteFactory';
 import { UnitRenderer } from '../rendering/UnitRenderer';
+import { BattleUI } from '../ui/BattleUI';
 
 // ── Layout constants ──────────────────────────────────────
 const HUD_HEIGHT = 110;
@@ -27,23 +28,7 @@ export class BattleScene extends Phaser.Scene {
   private killCount = 0;
 
   // HUD elements
-  private suppliesText!: Phaser.GameObjects.Text;
-  private allyHpBar!: Phaser.GameObjects.Rectangle;
-  private allyHpText!: Phaser.GameObjects.Text;
-  private enemyHpBar!: Phaser.GameObjects.Rectangle;
-  private enemyHpText!: Phaser.GameObjects.Text;
-  private killText!: Phaser.GameObjects.Text;
-
-  // Deploy cards
-  private deployCards: Array<{
-    container: Phaser.GameObjects.Container;
-    bg: Phaser.GameObjects.Graphics;
-    cdOverlay: Phaser.GameObjects.Rectangle;
-    unitId: string;
-    costText: Phaser.GameObjects.Text;
-    w: number;
-    h: number;
-  }> = [];
+  private ui!: BattleUI;
 
   // Ambient
   private ashTimer?: Phaser.Time.TimerEvent;
@@ -67,8 +52,7 @@ export class BattleScene extends Phaser.Scene {
     this.drawBattlefieldBackground();
     this.drawBases();
     this.startAmbientParticles();
-    this.buildHud();
-    this.buildDeployBar();
+    this.ui = new BattleUI((unitId) => this.tryDeploy(unitId));
     this.drawVignette();
 
     // Camera fade in
@@ -166,237 +150,6 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ═══════════════════════════════════════════════════════════
-  //  HUD
-  // ═══════════════════════════════════════════════════════════
-
-  private buildHud(): void {
-    const hudDepth = 800;
-
-    // Panel background
-    const panel = this.add.graphics();
-    panel.setDepth(hudDepth);
-    // Gradient panel
-    const panelSteps = 6;
-    for (let i = 0; i < panelSteps; i++) {
-      const t = i / panelSteps;
-      const c = Phaser.Display.Color.Interpolate.ColorWithColor(
-        Phaser.Display.Color.IntegerToColor(COLORS.panelTop),
-        Phaser.Display.Color.IntegerToColor(COLORS.panelBot),
-        100, Math.round(t * 100)
-      );
-      panel.fillStyle(Phaser.Display.Color.GetColor(c.r, c.g, c.b), 0.92);
-      panel.fillRect(0, i * (HUD_HEIGHT / panelSteps), GAME_WIDTH, HUD_HEIGHT / panelSteps + 1);
-    }
-    // Bottom border
-    panel.fillStyle(COLORS.metalFrame, 0.6);
-    panel.fillRect(0, HUD_HEIGHT - 2, GAME_WIDTH, 2);
-
-    // ── Supplies ──
-    // Supply icon (ammo box)
-    const supIcon = this.add.graphics();
-    supIcon.setDepth(hudDepth + 1);
-    supIcon.fillStyle(COLORS.supplyIcon);
-    supIcon.fillRoundedRect(16, 16, 18, 14, 3);
-    supIcon.lineStyle(1, COLORS.goldDark, 0.8);
-    supIcon.strokeRoundedRect(16, 16, 18, 14, 3);
-    supIcon.fillStyle(COLORS.goldDark);
-    supIcon.fillRect(22, 18, 6, 2);
-
-    this.add.text(40, 14, 'SUPPLIES', {
-      fontFamily: FONTS.ui,
-      fontSize: '11px',
-      color: hex(COLORS.inkDim),
-    }).setDepth(hudDepth + 1);
-
-    this.suppliesText = this.add.text(40, 28, '0', {
-      fontFamily: FONTS.title,
-      fontSize: '28px',
-      color: hex(COLORS.gold),
-      shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 2, fill: true },
-    }).setDepth(hudDepth + 1);
-
-    // ── Kill counter ──
-    const skullIcon = this.add.graphics();
-    skullIcon.setDepth(hudDepth + 1);
-    skullIcon.fillStyle(COLORS.inkDim, 0.7);
-    skullIcon.fillCircle(28, 68, 7);
-    skullIcon.fillStyle(COLORS.panel);
-    skullIcon.fillRect(24, 66, 3, 3);
-    skullIcon.fillRect(30, 66, 3, 3);
-
-    this.killText = this.add.text(40, 60, '0', {
-      fontFamily: FONTS.ui,
-      fontSize: '14px',
-      color: hex(COLORS.inkDim),
-      fontStyle: 'bold',
-    }).setDepth(hudDepth + 1);
-
-    // ── Ally HQ bar ──
-    const barW = 200;
-    const barH = 16;
-    const barX = GAME_WIDTH - barW - 20;
-
-    this.add.text(barX - 2, 14, 'HQ', {
-      fontFamily: FONTS.ui,
-      fontSize: '11px',
-      color: hex(COLORS.hpAlly),
-      fontStyle: 'bold',
-    }).setOrigin(0, 0).setDepth(hudDepth + 1);
-
-    // Star icon for ally
-    const starG = this.add.graphics();
-    starG.setDepth(hudDepth + 1);
-    starG.fillStyle(COLORS.hpAlly, 0.8);
-    starG.fillCircle(barX - 14, 38, 5);
-
-    this.add.rectangle(barX, 38, barW, barH, COLORS.hpBg).setOrigin(0, 0.5).setDepth(hudDepth + 1);
-    this.allyHpBar = this.add.rectangle(barX, 38, barW, barH - 2, COLORS.hpAlly).setOrigin(0, 0.5).setDepth(hudDepth + 2);
-    this.add.rectangle(barX, 38, barW, barH, 0x000000, 0).setOrigin(0, 0.5).setStrokeStyle(1, COLORS.hpBorder).setDepth(hudDepth + 2);
-
-    this.allyHpText = this.add.text(barX + barW - 4, 38, '', {
-      fontFamily: FONTS.ui,
-      fontSize: '11px',
-      color: hex(COLORS.ink),
-      fontStyle: 'bold',
-    }).setOrigin(1, 0.5).setDepth(hudDepth + 3);
-
-    // ── Enemy Bastion bar ──
-    this.add.text(barX - 2, 56, 'BASTION', {
-      fontFamily: FONTS.ui,
-      fontSize: '11px',
-      color: hex(COLORS.hpEnemy),
-      fontStyle: 'bold',
-    }).setOrigin(0, 0).setDepth(hudDepth + 1);
-
-    // Skull icon for enemy
-    const skullG2 = this.add.graphics();
-    skullG2.setDepth(hudDepth + 1);
-    skullG2.fillStyle(COLORS.hpEnemy, 0.8);
-    skullG2.fillCircle(barX - 14, 80, 5);
-    skullG2.fillStyle(COLORS.panelBot);
-    skullG2.fillRect(barX - 17, 79, 2, 2);
-    skullG2.fillRect(barX - 13, 79, 2, 2);
-
-    this.add.rectangle(barX, 80, barW, barH, COLORS.hpBg).setOrigin(0, 0.5).setDepth(hudDepth + 1);
-    this.enemyHpBar = this.add.rectangle(barX, 80, barW, barH - 2, COLORS.hpEnemy).setOrigin(0, 0.5).setDepth(hudDepth + 2);
-    this.add.rectangle(barX, 80, barW, barH, 0x000000, 0).setOrigin(0, 0.5).setStrokeStyle(1, COLORS.hpBorder).setDepth(hudDepth + 2);
-
-    this.enemyHpText = this.add.text(barX + barW - 4, 80, '', {
-      fontFamily: FONTS.ui,
-      fontSize: '11px',
-      color: hex(COLORS.ink),
-      fontStyle: 'bold',
-    }).setOrigin(1, 0.5).setDepth(hudDepth + 3);
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  //  DEPLOY BAR
-  // ═══════════════════════════════════════════════════════════
-
-  private buildDeployBar(): void {
-    const depth = 810;
-
-    // Panel background
-    const panel = this.add.graphics();
-    panel.setDepth(depth);
-    panel.fillStyle(COLORS.panel, 0.95);
-    panel.fillRect(0, DEPLOY_PANEL_TOP, GAME_WIDTH, GAME_HEIGHT - DEPLOY_PANEL_TOP);
-    panel.fillStyle(COLORS.metalFrame, 0.4);
-    panel.fillRect(0, DEPLOY_PANEL_TOP, GAME_WIDTH, 2);
-
-    const n = DEPLOYABLE.length;
-    const cardW = 120;
-    const cardH = 140;
-    const gap = 16;
-    const totalW = n * cardW + (n - 1) * gap;
-    let cx = (GAME_WIDTH - totalW) / 2 + cardW / 2;
-    const cy = DEPLOY_PANEL_TOP + (GAME_HEIGHT - DEPLOY_PANEL_TOP) / 2;
-
-    for (const unitId of DEPLOYABLE) {
-      const def = UNIT_INDEX[unitId];
-      const container = this.add.container(cx, cy);
-      container.setDepth(depth + 1);
-
-      const bg = this.add.graphics();
-
-      const drawCard = (ready: boolean) => {
-        bg.clear();
-        // Card background
-        bg.fillStyle(COLORS.cardFace, 1);
-        bg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 8);
-
-        // Border
-        const borderColor = ready ? COLORS.cardReady : COLORS.cardBorder;
-        bg.lineStyle(2, borderColor, ready ? 0.9 : 0.5);
-        bg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 8);
-
-        // Ready glow
-        if (ready) {
-          bg.lineStyle(4, COLORS.cardReady, 0.15);
-          bg.strokeRoundedRect(-cardW / 2 - 2, -cardH / 2 - 2, cardW + 4, cardH + 4, 10);
-        }
-
-        // Unit color chip
-        bg.fillStyle(def.placeholder.color, 1);
-        bg.fillRoundedRect(-20, -cardH / 2 + 12, 40, 40, 6);
-        bg.lineStyle(1, 0x000000, 0.3);
-        bg.strokeRoundedRect(-20, -cardH / 2 + 12, 40, 40, 6);
-
-        // Soldier icon on chip
-        bg.fillStyle(COLORS.allySkin, 0.8);
-        bg.fillCircle(0, -cardH / 2 + 24, 6); // head
-        bg.fillStyle(def.placeholder.color, 0.6);
-        bg.fillRect(-5, -cardH / 2 + 30, 10, 14); // body
-      };
-      drawCard(true);
-      container.add(bg);
-
-      // Unit label (letter)
-      const label = this.add.text(0, -cardH / 2 + 32, def.placeholder.label, {
-        fontFamily: FONTS.title,
-        fontSize: '22px',
-        color: hex(COLORS.ink),
-        stroke: hex(0x000000),
-        strokeThickness: 2,
-      }).setOrigin(0.5);
-      container.add(label);
-
-      // Unit name
-      const nameText = this.add.text(0, cardH / 2 - 42, def.name, {
-        fontFamily: FONTS.ui,
-        fontSize: '14px',
-        color: hex(COLORS.ink),
-        fontStyle: 'bold',
-      }).setOrigin(0.5);
-      container.add(nameText);
-
-      // Cost with supply icon
-      const costText = this.add.text(0, cardH / 2 - 22, `⬢ ${def.cost}`, {
-        fontFamily: FONTS.ui,
-        fontSize: '13px',
-        color: hex(COLORS.gold),
-      }).setOrigin(0.5);
-      container.add(costText);
-
-      // Cooldown overlay
-      const cdOverlay = this.add.rectangle(0, -cardH / 2, cardW - 4, cardH - 4, 0x000000, 0.6)
-        .setOrigin(0.5, 0)
-        .setVisible(false);
-      container.add(cdOverlay);
-
-      // Interactive zone
-      const zone = this.add.zone(cx, cy, cardW, cardH).setInteractive({ useHandCursor: true }).setDepth(depth + 2);
-      zone.on('pointerdown', () => {
-        this.tweens.add({ targets: container, scale: 0.93, duration: 60, yoyo: true });
-      });
-      zone.on('pointerup', () => this.tryDeploy(unitId, drawCard));
-
-      this.deployCards.push({ container, bg, cdOverlay, unitId, costText, w: cardW, h: cardH });
-      cx += cardW + gap;
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════
   //  VIGNETTE & POLISH
   // ═══════════════════════════════════════════════════════════
 
@@ -430,32 +183,21 @@ export class BattleScene extends Phaser.Scene {
   //  INPUT
   // ═══════════════════════════════════════════════════════════
 
-  private tryDeploy(unitId: string, redrawCard: (ready: boolean) => void): void {
-    const def = UNIT_INDEX[unitId];
+  private tryDeploy(unitId: string): void {
+    const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
     const cd = this.cooldowns.get(unitId) ?? 0;
     if (cd > 0) return;
     if (!this.sim.canAfford(unitId)) {
-      this.flashSupplies();
       return;
     }
     const c = this.sim.spawnAlly(unitId);
     if (c) {
       this.cooldowns.set(unitId, def.deployCooldown);
       this.spawnUnit(c);
-      redrawCard(false);
     }
   }
 
-  private flashSupplies(): void {
-    this.tweens.add({
-      targets: this.suppliesText,
-      scale: 1.3,
-      duration: 80,
-      yoyo: true,
-    });
-    this.suppliesText.setColor(hex(COLORS.hpBad));
-    this.time.delayedCall(200, () => this.suppliesText.setColor(hex(COLORS.gold)));
-  }
+  
 
   // ═══════════════════════════════════════════════════════════
   //  UNIT MANAGEMENT
@@ -668,39 +410,15 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private refreshHud(): void {
-    this.suppliesText.setText(`${Math.floor(this.sim.supplies)}`);
-    this.killText.setText(`${this.killCount}`);
-
-    const barW = 200;
-
-    // Ally HP bar
-    const allyPct = Phaser.Math.Clamp(this.sim.allyBaseHp / this.sim.allyBaseMaxHp, 0, 1);
-    this.allyHpBar.width = Math.max(1, barW * allyPct);
-    this.allyHpBar.fillColor = allyPct > 0.35 ? COLORS.hpAlly : COLORS.hpBad;
-    this.allyHpText.setText(`${Math.ceil(this.sim.allyBaseHp)}/${this.sim.allyBaseMaxHp}`);
-
-    // Enemy HP bar
-    const enemyPct = Phaser.Math.Clamp(this.sim.enemyBaseHp / this.sim.enemyBaseMaxHp, 0, 1);
-    this.enemyHpBar.width = Math.max(1, barW * enemyPct);
-    this.enemyHpText.setText(`${Math.ceil(this.sim.enemyBaseHp)}/${this.sim.enemyBaseMaxHp}`);
-
-    // Deploy card states
-    for (const card of this.deployCards) {
-      const def = UNIT_INDEX[card.unitId];
-      const cd = this.cooldowns.get(card.unitId) ?? 0;
-      const affordable = this.sim.supplies >= def.cost;
-
-      if (cd > 0) {
-        card.cdOverlay.setVisible(true);
-        const frac = Phaser.Math.Clamp(cd / def.deployCooldown, 0, 1);
-        card.cdOverlay.height = card.h * frac;
-        card.cdOverlay.y = -card.h / 2;
-      } else {
-        card.cdOverlay.setVisible(false);
-      }
-
-      card.costText.setColor(affordable ? hex(COLORS.gold) : hex(COLORS.hpBad));
-    }
+    this.ui.update({
+      supplies: this.sim.supplies,
+      killCount: this.killCount,
+      allyHp: this.sim.allyBaseHp,
+      allyMaxHp: this.sim.allyBaseMaxHp,
+      enemyHp: this.sim.enemyBaseHp,
+      enemyMaxHp: this.sim.enemyBaseMaxHp,
+      cooldowns: this.cooldowns
+    });
   }
 
   private endBattle(outcome: 'won' | 'lost'): void {
@@ -710,6 +428,7 @@ export class BattleScene extends Phaser.Scene {
       this.cameras.main.once('camerafadeoutcomplete', () => {
         // Cleanup ambient timer
         this.ashTimer?.destroy();
+        this.ui.destroy();
         this.scene.start('Result', { outcome });
       });
     });

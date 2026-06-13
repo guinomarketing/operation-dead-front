@@ -16,8 +16,8 @@ const config: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   render: {
-    pixelArt: false,
-    antialias: true,
+    pixelArt: true,
+    antialias: false,
   },
   scene: [BootScene, MainMenuScene, BattleScene, ResultScene],
 };

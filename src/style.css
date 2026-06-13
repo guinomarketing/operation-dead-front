@@ -1,0 +1,140 @@
+:root {
+  --primary: #f59e0b; /* Amber/Orange retro vibe */
+  --primary-dark: #b45309;
+  --bg-dark: #0a0a0a;
+  --panel-bg: #1c1c1c;
+  --panel-border: #3f3f3f;
+  --text-main: #e5e7eb;
+  --font-title: 'Black Ops One', cursive;
+  --font-body: 'Roboto Condensed', sans-serif;
+  --hazard-stripe: repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,0.2),
+    rgba(0,0,0,0.2) 10px,
+    rgba(0,0,0,0) 10px,
+    rgba(0,0,0,0) 20px
+  );
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  overflow: hidden;
+  height: 100%;
+  font-family: var(--font-body);
+  color: var(--text-main);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+/* Contenedor Maestro para mantener el aspecto Portrait (Móvil) en monitores anchos */
+#app-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-width: 54vh; /* Mantiene la proporción aproximada 540x960 en pantallas anchas (9/16) */
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* El Canvas de Phaser se adaptará a este espacio y centrará automáticamente */
+#game {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+#game canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+}
+
+/* La UI capa se superpone exactamente en el mismo tamaño que el contenedor */
+#ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Estilo Militar Premium (Reemplaza al Glassmorphism) */
+.glass-panel {
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.9);
+  border-radius: 2px;
+  pointer-events: auto; /* Permite interacción */
+  position: relative;
+  overflow: hidden;
+}
+
+/* Detalle de textura en los paneles */
+.glass-panel::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--hazard-stripe);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Botones Premium Tácticos */
+.btn-primary {
+  background: var(--primary);
+  color: #000;
+  border: 2px solid #000;
+  padding: 12px 24px;
+  font-family: var(--font-title);
+  font-size: 1.2rem;
+  border-radius: 0;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: transform 0.1s, box-shadow 0.1s, background 0.1s;
+  pointer-events: auto;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.9);
+  letter-spacing: 1px;
+}
+
+.btn-primary:hover {
+  background: #fbbf24;
+}
+
+.btn-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.9);
+}
+
+/* Menú Principal a Pantalla Completa */
+#main-menu-ui {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10,10,10,0.8);
+  pointer-events: auto;
+}
+
+#main-menu-ui h1 {
+  font-family: var(--font-title);
+  font-size: 4rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  color: #fff;
+  text-shadow: 4px 4px 0px var(--primary-dark);
+  letter-spacing: 2px;
+}

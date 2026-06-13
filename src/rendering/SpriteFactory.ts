@@ -582,13 +582,18 @@ export class SpriteFactory {
       const cx = queue[head++];
       const cy = queue[head++];
 
+      // Tomar el color del fondo desde el pixel (0,0) como referencia
+      const bgR = data[0];
+      const bgG = data[1];
+      const bgB = data[2];
+
       const idx = (cy * w + cx) * 4;
       const r = data[idx];
       const g = data[idx + 1];
       const b = data[idx + 2];
 
-      // Verificar si es cercano a negro (r, g, b menores a 45)
-      if (r < 45 && g < 45 && b < 45) {
+      // Verificar si el color es cercano al color de fondo (tolerancia de 20)
+      if (Math.abs(r - bgR) < 20 && Math.abs(g - bgG) < 20 && Math.abs(b - bgB) < 20) {
         data[idx + 3] = 0; // Píxel transparente
 
         // Agregar vecinos (4 direcciones)
