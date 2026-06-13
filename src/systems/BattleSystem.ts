@@ -47,6 +47,8 @@ export interface BattleEvent {
   faction?: Faction;
   amount?: number;
   defId?: string;
+  x?: number;
+  y?: number;
 }
 
 export class BattleSystem {
@@ -57,6 +59,7 @@ export class BattleSystem {
   enemyBaseMaxHp: number;
   supplies: number;
   morale: number;
+  activeUpgrades: string[] = [];
   outcome: BattleOutcome = 'ongoing';
   waveSys: WaveSystem;
 
@@ -64,13 +67,14 @@ export class BattleSystem {
   private incomeCarry = 0;
   pendingEvents: BattleEvent[] = [];
 
-  constructor(allyBaseHp = BASES.ALLY_HP) {
+  constructor(allyBaseHp = BASES.ALLY_HP, activeUpgrades: string[] = []) {
     this.allyBaseHp = allyBaseHp;
     this.allyBaseMaxHp = allyBaseHp;
     this.enemyBaseHp = BASES.ENEMY_BASTION_HP;
     this.enemyBaseMaxHp = BASES.ENEMY_BASTION_HP;
     this.supplies = ECONOMY.STARTING_SUPPLIES;
     this.morale = MORALE.START;
+    this.activeUpgrades = activeUpgrades;
     this.waveSys = new WaveSystem(this);
   }
 
@@ -83,9 +87,25 @@ export class BattleSystem {
     const def = UNIT_INDEX[unitId];
     if (!def || this.supplies < def.cost) return null;
     this.supplies -= def.cost;
+
+    let maxHp = def.stats.maxHp;
+    if (unitId === 'rifleman' && this.activeUpgrades.includes('barracks-1')) {
+      maxHp = Math.round(maxHp * 1.2);
+    }
+
+    let damage = def.stats.damage;
+    if (this.activeUpgrades.includes('armory-1')) {
+      damage = Math.round(damage * 1.1);
+    }
+
+    let healPower = (def.stats as any).healPower;
+    if (healPower && this.activeUpgrades.includes('med-tent-1')) {
+      healPower = Math.round(healPower * 1.3);
+    }
+
     const c = this.addCombatant(def.id, 'ally', FIELD.SPAWN_ALLY_X, {
-      maxHp: def.stats.maxHp,
-      damage: def.stats.damage,
+      maxHp,
+      damage,
       attackInterval: def.stats.attackInterval,
       range: def.stats.range,
       moveSpeed: def.stats.moveSpeed,
@@ -94,15 +114,19 @@ export class BattleSystem {
       label: def.placeholder.label,
       tags: def.tags || [],
       traits: def.traits ? def.traits.map(t => t.id) : [],
-      healPower: (def.stats as any).healPower,
+      healPower,
       healRadius: (def.stats as any).healRadius,
       maxTargets: (def.stats as any).maxTargets,
     }, customLane);
 
     // Habilidad barricada del Engineer
     if (c && c.traits.includes('build-barricade')) {
+      let barHp = 180;
+      if (this.activeUpgrades.includes('engineering-bay-1')) {
+        barHp = Math.round(barHp * 1.5);
+      }
       this.addCombatant('barricade', 'ally', FIELD.SPAWN_ALLY_X + 50, {
-        maxHp: 180, // Vida de la barricada
+        maxHp: barHp, // Vida de la barricada
         damage: 0,
         attackInterval: 999999,
         range: 0,
@@ -305,7 +329,51 @@ export class BattleSystem {
     return best;
   }
 
+  private detonate(c: Combatant): void {
+    if ((c as any).detonated) return;
+    (c as any).detonated = true;
+    c.hp = 0;
+    c.alive = false;
+
+    this.pendingEvents.push({
+      type: 'death',
+      faction: c.faction,
+      defId: c.defId,
+      x: c.x,
+      y: FIELD.LANES_Y[c.lane]
+    });
+
+    const radius = 70;
+    const damage = 45;
+    const baseDamage = 20;
+
+    // Dañar aliados en rango
+    for (const o of this.combatants) {
+      if (o.alive && o.faction === 'ally') {
+        const dist = Math.abs(o.x - c.x);
+        if (dist <= radius && Math.abs(o.lane - c.lane) <= 1) {
+          o.hp -= damage;
+          if (o.hp <= 0) this.kill(o, 'enemy');
+        }
+      }
+    }
+
+    // Dañar base si está cerca
+    if (c.x <= FIELD.ALLY_BASE_X + radius) {
+      this.allyBaseHp = Math.max(0, this.allyBaseHp - baseDamage);
+      this.pendingEvents.push({ type: 'base-hit', faction: 'ally', amount: baseDamage });
+      
+      const loss = (baseDamage / 10) * MORALE.BASE_HIT_PER_10_DMG;
+      this.morale = Math.max(0, this.morale - loss);
+    }
+  }
+
   private dealDamage(attacker: Combatant, target: Combatant): void {
+    if (attacker.defId === 'exploder') {
+      this.detonate(attacker);
+      return;
+    }
+
     const dmg = Math.max(1, attacker.damage - target.armor);
     target.hp -= dmg;
     
@@ -340,8 +408,21 @@ export class BattleSystem {
 
   private kill(c: Combatant, killerFaction: Faction): void {
     if (!c.alive) return;
+
+    if (c.defId === 'exploder') {
+      this.detonate(c);
+      return;
+    }
+
     c.alive = false;
-    this.pendingEvents.push({ type: 'death', faction: c.faction, defId: c.defId });
+    this.pendingEvents.push({
+      type: 'death',
+      faction: c.faction,
+      defId: c.defId,
+      x: c.x,
+      y: FIELD.LANES_Y[c.lane]
+    });
+
     if (c.faction === 'enemy' && killerFaction === 'ally') {
       const def = ENEMY_INDEX[c.defId];
       const bounty = def?.bounty ?? 0;
@@ -363,6 +444,11 @@ export class BattleSystem {
   }
 
   private hitBase(c: Combatant): void {
+    if (c.defId === 'exploder') {
+      this.detonate(c);
+      return;
+    }
+
     if (c.faction === 'ally') {
       this.enemyBaseHp -= c.damage;
       this.pendingEvents.push({ type: 'base-hit', faction: 'enemy', amount: c.damage });

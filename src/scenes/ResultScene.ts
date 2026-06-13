@@ -4,6 +4,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { COLORS, hex, FONTS } from '../ui/colors';
+import { UPGRADE_INDEX } from '../data/upgrades';
 
 interface ResultData {
   outcome: 'won' | 'lost';
@@ -117,10 +118,118 @@ export class ResultScene extends Phaser.Scene {
     this.tweens.add({ targets: sep, alpha: 1, duration: 600, delay });
     delay += 300;
 
-    // Buttons
-    this.time.delayedCall(delay, () => {
-      this.makeButton(cx, 540, won ? 'NEXT BATTLE' : 'TRY AGAIN', () => this.transition('Battle'), won ? COLORS.allyBase : COLORS.enemyBase);
-      this.makeButton(cx, 640, 'MAIN MENU', () => this.transition('MainMenu'), COLORS.metalDark);
+    // Upgrades or Buttons
+    if (won) {
+      this.showRewards(cx, delay);
+    } else {
+      this.time.delayedCall(delay, () => {
+        this.makeButton(cx, 540, 'TRY AGAIN', () => this.transition('Battle'), COLORS.enemyBase);
+        this.makeButton(cx, 640, 'MAIN MENU', () => this.transition('MainMenu'), COLORS.metalDark);
+      });
+    }
+  }
+
+  private showRewards(cx: number, delay: number): void {
+    const title = this.add.text(cx, 370, 'CHOOSE A REWARD', {
+      fontFamily: FONTS.title,
+      fontSize: '22px',
+      color: hex(COLORS.gold),
+      shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 4, fill: true }
+    }).setOrigin(0.5).setAlpha(0);
+
+    this.tweens.add({ targets: title, alpha: 1, duration: 600, delay });
+    
+    const pool = ['barracks-1', 'armory-1', 'med-tent-1', 'engineering-bay-1', 'war-room-1'];
+    const picked = Phaser.Utils.Array.Shuffle(pool).slice(0, 3);
+    
+    const containers: Phaser.GameObjects.Container[] = [];
+    const zones: Phaser.GameObjects.Zone[] = [];
+    
+    picked.forEach((upId, index) => {
+      const up = UPGRADE_INDEX[upId];
+      if (!up) return;
+      
+      const x = cx + (index - 1) * 150;
+      const y = 500;
+      const w = 130;
+      const h = 180;
+      
+      const container = this.add.container(x, y);
+      
+      // Card base
+      const bg = this.add.graphics();
+      bg.fillStyle(COLORS.cardFace, 1);
+      bg.fillRoundedRect(-w/2, -h/2, w, h, 6);
+      bg.lineStyle(2, COLORS.metalFrame, 0.8);
+      bg.strokeRoundedRect(-w/2, -h/2, w, h, 6);
+      
+      // Card header highlight
+      bg.fillStyle(COLORS.panelEdge, 0.5);
+      bg.fillRect(-w/2 + 2, -h/2 + 2, w - 4, 30);
+      
+      // Title
+      const t = this.add.text(0, -h/2 + 15, up.name, {
+        fontFamily: FONTS.ui,
+        fontSize: '13px',
+        color: '#fff',
+        fontStyle: 'bold',
+        align: 'center',
+        wordWrap: { width: w - 10 }
+      }).setOrigin(0.5);
+      
+      // Description
+      const desc = this.add.text(0, 10, up.description, {
+        fontFamily: FONTS.body,
+        fontSize: '11px',
+        color: hex(COLORS.inkDim),
+        align: 'center',
+        wordWrap: { width: w - 16 }
+      }).setOrigin(0.5);
+      
+      container.add([bg, t, desc]);
+      container.setAlpha(0);
+      container.setScale(0.8);
+      
+      this.tweens.add({
+        targets: container,
+        alpha: 1,
+        scale: 1,
+        duration: 500,
+        ease: 'Back.easeOut',
+        delay: delay + 200 + index * 100
+      });
+      
+      containers.push(container);
+      
+      // Click zone
+      const zone = this.add.zone(x, y, w, h).setInteractive({ useHandCursor: true });
+      zone.on('pointerdown', () => {
+        this.tweens.add({ targets: container, scale: 0.95, duration: 60 });
+      });
+      zone.on('pointerup', () => {
+        // Apply reward
+        const owned = this.game.registry.get('upgrades') || [];
+        owned.push(upId);
+        this.game.registry.set('upgrades', owned);
+        
+        // Clean up cards
+        zones.forEach(z => z.destroy());
+        this.tweens.add({
+          targets: [title, ...containers],
+          alpha: 0,
+          scale: 0.8,
+          duration: 300,
+          onComplete: () => {
+            containers.forEach(c => c.destroy());
+            title.destroy();
+            
+            // Show continuation buttons
+            this.makeButton(cx, 540, 'NEXT BATTLE', () => this.transition('Battle'), COLORS.allyBase);
+            this.makeButton(cx, 640, 'MAIN MENU', () => this.transition('MainMenu'), COLORS.metalDark);
+          }
+        });
+      });
+      zones.push(zone);
     });
   }
 

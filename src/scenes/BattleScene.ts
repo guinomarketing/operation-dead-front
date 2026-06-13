@@ -4,7 +4,7 @@
  * visual de calidad producción mobile.
  */
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, FIELD } from '../utils/constants';
+import { GAME_WIDTH, GAME_HEIGHT, FIELD, BASES } from '../utils/constants';
 import { COLORS, hex, FONTS } from '../ui/colors';
 import { BattleSystem, type Combatant } from '../systems/BattleSystem';
 import { UNIT_INDEX } from '../data/units';
@@ -42,7 +42,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.sim = new BattleSystem();
+    const activeUpgrades = this.game.registry.get('upgrades') || [];
+    this.sim = new BattleSystem(BASES.ALLY_HP, activeUpgrades);
     this.renderers.clear();
     this.cooldowns.clear();
     this.killCount = 0;
@@ -325,7 +326,12 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
-    this.cooldowns.set(abilityId, def.cooldown);
+    let cd = def.cooldown;
+    if (this.sim.activeUpgrades.includes('war-room-1')) {
+      cd = Math.round(cd * 0.8);
+    }
+
+    this.cooldowns.set(abilityId, cd);
     this.sim.supplies -= def.cost;
 
     if (abilityId === 'airstrike') {
@@ -615,11 +621,18 @@ export class BattleScene extends Phaser.Scene {
     // Process battle events for visual effects
     for (const ev of this.sim.pendingEvents) {
       if (ev.type === 'death') {
+        const ex = ev.x !== undefined ? ev.x : (ev.faction === 'enemy' ? Phaser.Math.Between(300, 480) : Phaser.Math.Between(50, 200));
+        const ey = ev.y !== undefined ? ev.y : FIELD.LANES_Y[Phaser.Math.Between(0, 2)];
+        
         if (ev.faction === 'enemy') {
           this.killCount++;
-          this.spawnGreenSmoke(Phaser.Math.Between(300, 480), FIELD.LANES_Y[Phaser.Math.Between(0, 2)]);
+          if (ev.defId === 'exploder') {
+            this.triggerExploderExplosion(ex, ey);
+          } else {
+            this.spawnGreenSmoke(ex, ey);
+          }
         } else {
-          this.spawnBloodSplat(Phaser.Math.Between(50, 200), FIELD.LANES_Y[Phaser.Math.Between(0, 2)]);
+          this.spawnBloodSplat(ex, ey);
         }
       }
       if (ev.type === 'bounty' && ev.amount) {
@@ -686,5 +699,43 @@ export class BattleScene extends Phaser.Scene {
         this.scene.start('Result', { outcome });
       });
     });
+  }
+
+  private triggerExploderExplosion(x: number, y: number): void {
+    this.cameras.main.shake(150, 0.006);
+    
+    // Toxic flash
+    const flash = this.add.circle(x, y, 70, 0x33ff11, 0.6);
+    flash.setDepth(y + 10);
+    this.tweens.add({
+      targets: flash,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => flash.destroy()
+    });
+
+    // Spawning 8-10 green smoke particles
+    for (let i = 0; i < 10; i++) {
+      const size = Phaser.Math.Between(8, 16);
+      const smoke = this.add.circle(
+        x + Phaser.Math.Between(-15, 15),
+        y + Phaser.Math.Between(-10, 10),
+        size,
+        0x5ee03a, // serum
+        0.3
+      );
+      smoke.setDepth(y + 15);
+      this.tweens.add({
+        targets: smoke,
+        y: y - Phaser.Math.Between(20, 50),
+        x: smoke.x + Phaser.Math.Between(-20, 20),
+        alpha: 0,
+        scale: 1.8,
+        duration: Phaser.Math.Between(600, 1000),
+        onComplete: () => smoke.destroy()
+      });
+    }
   }
 }

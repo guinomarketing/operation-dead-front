@@ -13,6 +13,9 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Inicializar / reiniciar mejoras de la run
+    this.game.registry.set('upgrades', []);
+
     // Dibujar el nuevo fondo premium
     const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg_battlefield');
     // Escalar para que cubra la pantalla manteniendo la relación de aspecto
