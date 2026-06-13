@@ -13,7 +13,7 @@ export class BattleUI {
   private moraleBarInner!: HTMLElement;
   private moraleText!: HTMLElement;
   
-  private cards: Record<string, { el: HTMLElement, costEl: HTMLElement, cdOverlay: HTMLElement }> = {};
+  private cards: Record<string, { el: HTMLElement, costEl: HTMLElement, cdOverlay: HTMLElement, nameEl: HTMLElement }> = {};
   private abilityButtons: Record<string, { el: HTMLElement, costEl: HTMLElement, cdOverlay: HTMLElement }> = {};
   
   private selectedUnitId: string | null = null;
@@ -286,7 +286,7 @@ export class BattleUI {
       card.appendChild(name);
       card.appendChild(cost);
 
-      this.cards[unitId] = { el: card, costEl: cost, cdOverlay };
+      this.cards[unitId] = { el: card, costEl: cost, cdOverlay, nameEl: name };
       deployRow.appendChild(card);
     }
 
@@ -351,6 +351,8 @@ export class BattleUI {
     enemyMaxHp: number;
     cooldowns: Map<string, number>;
     morale: number;
+    roster?: any[];
+    deployedSoldierIds?: Set<string>;
   }) {
     // Suministros y Bajas
     this.suppliesEl.innerText = Math.floor(state.supplies).toString();
@@ -381,7 +383,20 @@ export class BattleUI {
     // Actualizar Cooldown y Economía de Unidades
     for (const [unitId, card] of Object.entries(this.cards)) {
       const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
-      const affordable = state.supplies >= def.cost;
+      
+      // Calcular cuántos soldados de esta clase están disponibles
+      let available = 0;
+      let total = 0;
+      if (state.roster && state.deployedSoldierIds) {
+        const classSoldiers = state.roster.filter(s => s.unitId === unitId && s.status === 'ready');
+        total = classSoldiers.length;
+        const deployed = classSoldiers.filter(s => state.deployedSoldierIds!.has(s.id)).length;
+        available = total - deployed;
+      }
+      
+      card.nameEl.innerText = `${def.name} (${available})`;
+
+      const affordable = state.supplies >= def.cost && available > 0;
       card.costEl.style.color = affordable ? 'var(--primary)' : '#ef4444';
 
       const cd = state.cooldowns.get(unitId) ?? 0;
@@ -393,7 +408,7 @@ export class BattleUI {
       }
 
       if (this.selectedUnitId !== unitId) {
-        card.el.style.opacity = cd > 0 || !affordable ? '0.6' : '1';
+        card.el.style.opacity = cd > 0 || !affordable || available === 0 ? '0.6' : '1';
       }
     }
 

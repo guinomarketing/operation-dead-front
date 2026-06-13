@@ -132,17 +132,7 @@ export class ResultScene extends Phaser.Scene {
       }
     } else {
       this.time.delayedCall(delay, () => {
-        this.makeButton(cx, 540, 'REINTENTAR', () => {
-          // Restore playable HP & morale to retry battle
-          const runState = this.game.registry.get('runState');
-          if (runState) {
-            runState.baseHp = Math.max(40, runState.baseHp);
-            runState.morale = Math.max(30, runState.morale);
-            this.game.registry.set('runState', runState);
-          }
-          this.transition('Battle');
-        }, COLORS.enemyBase);
-        this.makeButton(cx, 640, 'MENÚ PRINCIPAL', () => this.transition('MainMenu'), COLORS.metalDark);
+        this.makeButton(cx, 580, 'MENÚ PRINCIPAL', () => this.transition('MainMenu'), COLORS.metalDark);
       });
     }
   }

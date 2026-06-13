@@ -91,6 +91,18 @@ export interface OperationDef {
   unlockCostMedals?: number; // alternativa a desbloquear venciendo la anterior
 }
 
+export interface RosterSoldier {
+  id: string;
+  unitId: string;
+  name: string;
+  nickname: string;
+  level: number;
+  xp: number;
+  colorTint: number;
+  status: 'ready' | 'dead';
+  kills?: number;
+}
+
 /** Estado serializable de la run en curso (lo persiste SaveSystem). */
 export interface RunState {
   operationId: string;
@@ -111,4 +123,5 @@ export interface RunState {
   intelEarned: number;
   medalsEarned: number;
   kills: number;
+  roster: RosterSoldier[];
 }

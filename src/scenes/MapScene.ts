@@ -5,6 +5,7 @@ import { RunSystem } from '../systems/RunSystem';
 import type { RunState, RunMapDef, RunNodeDef } from '../types/RunTypes';
 import { EVENTS } from '../data/events';
 import { UPGRADES } from '../data/upgrades';
+import { UNIT_INDEX } from '../data/units';
 
 export class MapScene extends Phaser.Scene {
   private runState!: RunState;
@@ -28,6 +29,14 @@ export class MapScene extends Phaser.Scene {
       this.mapDef = RunSystem.generateMap(this.runState.seed);
       this.game.registry.set('runState', this.runState);
       this.game.registry.set('mapDef', this.mapDef);
+    }
+
+    // Comprobar si nos quedamos sin soldados (derrota definitiva de la run)
+    if (this.runState && this.runState.roster && this.runState.roster.length === 0) {
+      this.drawBackground();
+      this.uiContainer = document.getElementById('ui-layer');
+      this.showGameOverRosterEmpty();
+      return;
     }
 
     // Dibujar el fondo táctico militar
@@ -305,7 +314,28 @@ export class MapScene extends Phaser.Scene {
       <div style="color:#fff">⚙ ${this.runState.upgradeIds.length} <span style="font-family:var(--font-body); font-size:10px; color:#aaa;">MEJORAS</span></div>
     `;
 
-    // Derecha: Botón Salir / Retirarse
+    // Derecha: Botón Salir / Retirarse y Ver Plantel
+    const rightDiv = document.createElement('div');
+    rightDiv.style.display = 'flex';
+    rightDiv.style.alignItems = 'center';
+    rightDiv.style.gap = '8px';
+
+    const plantBtn = document.createElement('button');
+    plantBtn.className = 'btn-primary';
+    plantBtn.style.background = 'var(--primary)';
+    plantBtn.style.color = '#000';
+    plantBtn.style.border = '1px solid #000';
+    plantBtn.style.padding = '4px 8px';
+    plantBtn.style.fontSize = '11px';
+    plantBtn.style.fontWeight = 'bold';
+    plantBtn.style.cursor = 'pointer';
+    plantBtn.style.boxShadow = 'none';
+    plantBtn.style.letterSpacing = '0px';
+    plantBtn.innerText = 'VER PLANTEL';
+    plantBtn.onclick = () => {
+      this.openRosterOverlay();
+    };
+
     const exitBtn = document.createElement('button');
     exitBtn.style.background = '#3f3f3f';
     exitBtn.style.color = '#fff';
@@ -322,9 +352,12 @@ export class MapScene extends Phaser.Scene {
       });
     };
 
+    rightDiv.appendChild(plantBtn);
+    rightDiv.appendChild(exitBtn);
+
     topBar.appendChild(statusDiv);
     topBar.appendChild(currencyDiv);
-    topBar.appendChild(exitBtn);
+    topBar.appendChild(rightDiv);
 
     this.uiContainer.appendChild(topBar);
   }
@@ -552,6 +585,24 @@ export class MapScene extends Phaser.Scene {
     });
     itemsDiv.appendChild(healRow);
 
+    // Añadir opción de reclutar soldado aleatorio por 1 Intel
+    const recruitClasses = ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower'];
+    const randomClass = recruitClasses[Math.floor(Math.random() * recruitClasses.length)];
+    const newRecruit = RunSystem.generateRandomSoldier(randomClass);
+    const recruitRow = this.createShopItemRow(
+      `Reclutar: ${newRecruit.name}`,
+      `Clase: ${UNIT_INDEX[randomClass].name} ("${newRecruit.nickname}"). Sumalo a tu plantel.`,
+      1,
+      () => {
+        this.runState.intelEarned -= 1;
+        if (!this.runState.roster) this.runState.roster = [];
+        this.runState.roster.push(newRecruit);
+        this.game.registry.set('runState', this.runState);
+        this.createHTMLOverlay();
+      }
+    );
+    itemsDiv.appendChild(recruitRow);
+
     const closeBtn = document.createElement('button');
     closeBtn.className = 'btn-primary';
     closeBtn.innerText = 'SALIR DE LA ESTACIÓN';
@@ -677,8 +728,25 @@ export class MapScene extends Phaser.Scene {
       this.completeCamp(modal);
     };
 
+    // Opción 3: Reclutar Refuerzos gratis
+    const recruitBtn = document.createElement('button');
+    recruitBtn.className = 'btn-primary';
+    recruitBtn.style.flex = '1';
+    recruitBtn.style.height = '80px';
+    const recruitClasses = ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower'];
+    const tempRecruit = RunSystem.generateRandomSoldier(recruitClasses[Math.floor(Math.random() * recruitClasses.length)]);
+    recruitBtn.innerHTML = `<span style="font-size:18px;">🎖 RECLUTAR</span><br/><span style="font-size:11px; color:#222; font-weight:bold;">${tempRecruit.name} (${UNIT_INDEX[tempRecruit.unitId].name})</span>`;
+    recruitBtn.onclick = () => {
+      if (!this.runState.roster) {
+        this.runState.roster = [];
+      }
+      this.runState.roster.push(tempRecruit);
+      this.completeCamp(modal);
+    };
+
     actionsDiv.appendChild(restBtn);
     actionsDiv.appendChild(rallyBtn);
+    actionsDiv.appendChild(recruitBtn);
 
     modal.appendChild(title);
     modal.appendChild(desc);
@@ -694,5 +762,247 @@ export class MapScene extends Phaser.Scene {
     
     modal.remove();
     this.drawMapGraph();
+  }
+
+  private openRosterOverlay(): void {
+    if (!this.uiContainer) return;
+
+    // Crear el overlay de fondo del modal a pantalla completa
+    const overlay = document.createElement('div');
+    overlay.style.position = 'absolute';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(10, 12, 10, 0.96)';
+    overlay.style.zIndex = '200';
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.display = 'flex';
+    overlay.style.flexDirection = 'column';
+    overlay.style.padding = '20px';
+    overlay.style.boxSizing = 'border-box';
+
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.borderBottom = '2px solid var(--panel-border)';
+    header.style.paddingBottom = '10px';
+    header.style.marginBottom = '15px';
+
+    const title = document.createElement('h2');
+    title.innerText = 'PLANTEL DE COMBATIENTES';
+    title.style.fontFamily = 'var(--font-title)';
+    title.style.fontSize = '20px';
+    title.style.color = 'var(--primary)';
+    title.style.margin = '0';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'btn-primary';
+    closeBtn.style.padding = '6px 16px';
+    closeBtn.style.fontSize = '12px';
+    closeBtn.innerText = 'CERRAR';
+    closeBtn.style.boxShadow = 'none';
+    closeBtn.onclick = () => {
+      overlay.remove();
+    };
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    overlay.appendChild(header);
+
+    // Contenedor scrollable de la lista
+    const listDiv = document.createElement('div');
+    listDiv.style.flex = '1';
+    listDiv.style.overflowY = 'auto';
+    listDiv.style.display = 'flex';
+    listDiv.style.flexDirection = 'column';
+    listDiv.style.gap = '12px';
+    listDiv.style.paddingRight = '5px';
+
+    const roster = this.runState.roster || [];
+
+    if (roster.length === 0) {
+      const emptyMsg = document.createElement('div');
+      emptyMsg.innerText = 'No tenés soldados en el plantel. Reclutá en un campamento.';
+      emptyMsg.style.textAlign = 'center';
+      emptyMsg.style.color = '#888';
+      emptyMsg.style.marginTop = '40px';
+      listDiv.appendChild(emptyMsg);
+    } else {
+      roster.forEach((soldier: any) => {
+        const def = UNIT_INDEX[soldier.unitId];
+        if (!def) return;
+
+        const card = document.createElement('div');
+        card.className = 'glass-panel';
+        card.style.padding = '12px';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.gap = '8px';
+
+        // Fila 1: Nombre, Clase, Nivel
+        const row1 = document.createElement('div');
+        row1.style.display = 'flex';
+        row1.style.justifyContent = 'space-between';
+        row1.style.alignItems = 'center';
+
+        const nameInfo = document.createElement('div');
+        nameInfo.innerHTML = `
+          <span style="font-weight:bold; color:#fff; font-size:14px;">${soldier.name}</span>
+          <span style="font-size:11px; color:#aaa; margin-left: 8px;">[${def.name}]</span>
+        `;
+
+        const levelInfo = document.createElement('div');
+        levelInfo.style.fontFamily = 'var(--font-title)';
+        levelInfo.style.color = 'var(--primary)';
+        levelInfo.style.fontSize = '12px';
+        levelInfo.innerText = `NIVEL ${soldier.level}`;
+
+        row1.appendChild(nameInfo);
+        row1.appendChild(levelInfo);
+
+        // Fila 2: Cuadro de texto para editar el apodo en tiempo real
+        const row2 = document.createElement('div');
+        row2.style.display = 'flex';
+        row2.style.alignItems = 'center';
+        row2.style.gap = '8px';
+
+        const nickLabel = document.createElement('span');
+        nickLabel.innerText = 'Apodo:';
+        nickLabel.style.fontSize = '12px';
+        nickLabel.style.color = '#888';
+
+        const nickInput = document.createElement('input');
+        nickInput.type = 'text';
+        nickInput.value = soldier.nickname || '';
+        nickInput.style.flex = '1';
+        nickInput.style.background = '#222';
+        nickInput.style.color = '#fff';
+        nickInput.style.border = '1px solid #444';
+        nickInput.style.padding = '4px 8px';
+        nickInput.style.fontSize = '12px';
+        nickInput.style.borderRadius = '2px';
+        
+        nickInput.oninput = () => {
+          soldier.nickname = nickInput.value;
+          this.game.registry.set('runState', this.runState);
+        };
+
+        row2.appendChild(nickLabel);
+        row2.appendChild(nickInput);
+
+        // Fila 3: Barra de XP y Selector de Color Tint
+        const row3 = document.createElement('div');
+        row3.style.display = 'flex';
+        row3.style.justifyContent = 'space-between';
+        row3.style.alignItems = 'center';
+        row3.style.gap = '15px';
+
+        const xpDiv = document.createElement('div');
+        xpDiv.style.flex = '1';
+        const xpPercentage = soldier.level >= 5 ? 1.0 : (soldier.xp % 100) / 100;
+        const xpText = soldier.level >= 5 ? 'MAX XP' : `${soldier.xp % 100}/100 XP (Total: ${soldier.xp})`;
+        xpDiv.appendChild(this.createProgressBar('#3b82f6', xpPercentage, xpText));
+
+        // Selector de color
+        const colorDiv = document.createElement('div');
+        colorDiv.style.display = 'flex';
+        colorDiv.style.gap = '4px';
+        colorDiv.style.alignItems = 'center';
+
+        const colors = [
+          { value: 0xffffff, hex: '#ffffff' }, // Blanco (Default)
+          { value: 0x4ade80, hex: '#4ade80' }, // Verde
+          { value: 0x60a5fa, hex: '#60a5fa' }, // Azul
+          { value: 0xf43f5e, hex: '#f43f5e' }, // Rojo
+          { value: 0xf59e0b, hex: '#f59e0b' }, // Amarillo
+          { value: 0xa855f7, hex: '#a855f7' }, // Púrpura
+        ];
+
+        colors.forEach(col => {
+          const circle = document.createElement('div');
+          circle.style.width = '14px';
+          circle.style.height = '14px';
+          circle.style.borderRadius = '50%';
+          circle.style.background = col.hex;
+          circle.style.cursor = 'pointer';
+          circle.style.border = soldier.colorTint === col.value ? '2px solid #fff' : '1px solid #000';
+          
+          circle.onclick = () => {
+            soldier.colorTint = col.value;
+            this.game.registry.set('runState', this.runState);
+            // Actualizar bordes
+            Array.from(colorDiv.children).forEach((child: any, idx) => {
+              child.style.border = colors[idx].value === col.value ? '2px solid #fff' : '1px solid #000';
+            });
+          };
+
+          colorDiv.appendChild(circle);
+        });
+
+        row3.appendChild(xpDiv);
+        row3.appendChild(colorDiv);
+
+        card.appendChild(row1);
+        card.appendChild(row2);
+        card.appendChild(row3);
+        listDiv.appendChild(card);
+      });
+    }
+
+    overlay.appendChild(listDiv);
+    this.uiContainer.appendChild(overlay);
+  }
+
+  private showGameOverRosterEmpty(): void {
+    if (!this.uiContainer) return;
+    this.uiContainer.innerHTML = '';
+
+    const modal = document.createElement('div');
+    modal.className = 'glass-panel';
+    modal.style.position = 'absolute';
+    modal.style.top = '250px';
+    modal.style.left = '50%';
+    modal.style.transform = 'translateX(-50%)';
+    modal.style.width = '88%';
+    modal.style.padding = '30px 20px';
+    modal.style.boxSizing = 'border-box';
+    modal.style.display = 'flex';
+    modal.style.flexDirection = 'column';
+    modal.style.alignItems = 'center';
+    modal.style.pointerEvents = 'auto';
+    modal.style.zIndex = '300';
+
+    const title = document.createElement('h2');
+    title.innerText = 'SIN SOLDADOS ACTIVOS';
+    title.style.fontFamily = 'var(--font-title)';
+    title.style.fontSize = '24px';
+    title.style.color = '#ef4444';
+    title.style.margin = '0 0 15px 0';
+
+    const desc = document.createElement('p');
+    desc.innerText = 'El batallón completo fue aniquilado. No quedan combatientes para sostener la línea en la Patagonia.';
+    desc.style.fontSize = '14px';
+    desc.style.color = '#ccc';
+    desc.style.textAlign = 'center';
+    desc.style.lineHeight = '1.5';
+    desc.style.margin = '0 0 25px 0';
+
+    const menuBtn = document.createElement('button');
+    menuBtn.className = 'btn-primary';
+    menuBtn.innerText = 'MENÚ PRINCIPAL';
+    menuBtn.style.width = '100%';
+    menuBtn.onclick = () => {
+      this.cameras.main.fadeOut(400, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('MainMenu');
+      });
+    };
+
+    modal.appendChild(title);
+    modal.appendChild(desc);
+    modal.appendChild(menuBtn);
+    this.uiContainer.appendChild(modal);
   }
 }

@@ -32,6 +32,9 @@ export class BattleScene extends Phaser.Scene {
   private ashTimer?: Phaser.Time.TimerEvent;
   private vignette!: Phaser.GameObjects.Graphics;
 
+  private deployedSoldierIds = new Set<string>();
+  private uidToSoldierId = new Map<number, string>();
+
   // Selección y apuntado (MVP 0.2+)
   private selectedUnitId: string | null = null;
   private activeAbilityId: string | null = null;
@@ -65,6 +68,8 @@ export class BattleScene extends Phaser.Scene {
     this.killCount = 0;
     this.selectedUnitId = null;
     this.activeAbilityId = null;
+    this.deployedSoldierIds.clear();
+    this.uidToSoldierId.clear();
 
     // Generate all textures
     SpriteFactory.ensureTextures(this);
@@ -281,6 +286,13 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
+    const runState = this.game.registry.get('runState');
+    const roster = runState ? runState.roster : [];
+    const available = roster.filter((s: any) => s.unitId === unitId && s.status === 'ready' && !this.deployedSoldierIds.has(s.id)).length;
+    if (available <= 0) {
+      return;
+    }
+
     if (this.selectedUnitId === unitId) {
       this.selectedUnitId = null;
       this.ui.setSelectedUnit(null);
@@ -335,13 +347,29 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private tryDeployInLane(unitId: string, lane: number): void {
+    const runState = this.game.registry.get('runState');
+    if (!runState || !runState.roster) return;
+
+    // Buscar el primer recluta disponible de esta clase
+    const soldier = runState.roster.find((s: any) => 
+      s.unitId === unitId && 
+      s.status === 'ready' && 
+      !this.deployedSoldierIds.has(s.id)
+    );
+
+    if (!soldier) {
+      return; // No quedan soldados de esta clase
+    }
+
     const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
     if (!this.sim.canAfford(unitId)) {
       this.ui.flashSupplies();
       return;
     }
-    const c = this.sim.spawnAlly(unitId, lane);
+
+    const c = this.sim.spawnAlly(unitId, lane, soldier);
     if (c) {
+      this.deployedSoldierIds.add(soldier.id);
       this.cooldowns.set(unitId, def.deployCooldown);
       this.spawnUnit(c);
       this.spawnDeployPuff(FIELD.SPAWN_ALLY_X, FIELD.LANES_Y[lane]);
@@ -507,6 +535,9 @@ export class BattleScene extends Phaser.Scene {
   private spawnUnit(c: Combatant): void {
     const renderer = new UnitRenderer(this, c);
     this.renderers.set(c.uid, renderer);
+    if (c.soldierId) {
+      this.uidToSoldierId.set(c.uid, c.soldierId);
+    }
   }
 
   private syncUnits(delta: number): void {
@@ -687,6 +718,17 @@ export class BattleScene extends Phaser.Scene {
           }
         } else {
           this.spawnBloodSplat(ex, ey);
+          if (ev.uid && this.uidToSoldierId.has(ev.uid)) {
+            const soldierId = this.uidToSoldierId.get(ev.uid);
+            const runState = this.game.registry.get('runState');
+            if (runState && runState.roster && soldierId) {
+              const rosterSoldier = runState.roster.find((s: any) => s.id === soldierId);
+              if (rosterSoldier) {
+                rosterSoldier.status = 'dead';
+                console.log(`Soldier ${rosterSoldier.name} "${rosterSoldier.nickname}" has died in battle.`);
+              }
+            }
+          }
         }
       }
       if (ev.type === 'bounty' && ev.amount) {
@@ -761,6 +803,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private refreshHud(): void {
+    const runState = this.game.registry.get('runState');
+    const roster = runState ? runState.roster : [];
+
     this.ui.update({
       supplies: this.sim.supplies,
       killCount: this.killCount,
@@ -769,7 +814,9 @@ export class BattleScene extends Phaser.Scene {
       enemyHp: this.sim.enemyBaseHp,
       enemyMaxHp: this.sim.enemyBaseMaxHp,
       cooldowns: this.cooldowns,
-      morale: this.sim.morale
+      morale: this.sim.morale,
+      roster,
+      deployedSoldierIds: this.deployedSoldierIds
     });
   }
 
@@ -779,6 +826,40 @@ export class BattleScene extends Phaser.Scene {
     if (runState) {
       runState.baseHp = this.sim.allyBaseHp;
       runState.morale = this.sim.morale;
+
+      if (outcome === 'won' && runState.roster) {
+        // Distribuir XP y ascensos a los sobrevivientes desplegados
+        this.sim.combatants.forEach((c: any) => {
+          if (c.faction === 'ally' && c.alive && c.soldierId) {
+            const soldier = runState.roster.find((s: any) => s.id === c.soldierId);
+            if (soldier && soldier.status === 'ready') {
+              let xpGained = 15; // Bono de supervivencia
+              const killsThisBattle = c.kills || 0;
+              xpGained += killsThisBattle * 5; // Bono de bajas
+
+              soldier.xp += xpGained;
+              if (soldier.kills === undefined) {
+                soldier.kills = 0;
+              }
+              soldier.kills += killsThisBattle;
+
+              // Calcular nivel (XP acumulada, 100 XP por nivel, max 5)
+              const oldLevel = soldier.level || 1;
+              const newLevel = Math.min(5, 1 + Math.floor(soldier.xp / 100));
+              if (newLevel > oldLevel) {
+                soldier.level = newLevel;
+                console.log(`¡ASCENSO! ${soldier.name} subió al nivel ${newLevel}!`);
+              }
+            }
+          }
+        });
+      }
+
+      // Purgar definitivamente del plantel a los soldados muertos
+      if (runState.roster) {
+        runState.roster = runState.roster.filter((s: any) => s.status !== 'dead');
+      }
+
       this.game.registry.set('runState', runState);
     }
 

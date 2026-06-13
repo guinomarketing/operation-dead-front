@@ -7,7 +7,7 @@ import { UNIT_INDEX } from '../data/units';
 import { ENEMY_INDEX } from '../data/enemies';
 import { BOSS_INDEX } from '../data/bosses';
 import { WaveSystem } from './WaveSystem';
-import type { NodeType, BattleMode } from '../types/RunTypes';
+import type { NodeType, BattleMode, RosterSoldier } from '../types/RunTypes';
 
 export type Faction = 'ally' | 'enemy';
 
@@ -41,6 +41,13 @@ export interface Combatant {
   slowRemaining?: number;
   burnRemaining?: number;
   burnTickTimer?: number;
+
+  // XCOM Soldier customization
+  soldierId?: string;
+  nickname?: string;
+  level?: number;
+  colorTint?: number;
+  kills?: number;
 }
 
 export type BattleOutcome = 'ongoing' | 'won' | 'lost';
@@ -52,6 +59,7 @@ export interface BattleEvent {
   defId?: string;
   x?: number;
   y?: number;
+  uid?: number;
 }
 
 export class BattleSystem {
@@ -122,17 +130,26 @@ export class BattleSystem {
     return !!def && this.supplies >= def.cost;
   }
 
-  spawnAlly(unitId: string, customLane?: number): Combatant | null {
+  spawnAlly(unitId: string, customLane?: number, soldier?: RosterSoldier): Combatant | null {
     const def = UNIT_INDEX[unitId];
     if (!def || this.supplies < def.cost) return null;
     this.supplies -= def.cost;
 
     let maxHp = def.stats.maxHp;
+    let damage = def.stats.damage;
+
+    if (soldier) {
+      const lv = soldier.level || 1;
+      const hpMult = 1 + (lv - 1) * 0.15;
+      const dmgMult = 1 + (lv - 1) * 0.10;
+      maxHp = Math.round(maxHp * hpMult);
+      damage = Math.round(damage * dmgMult);
+    }
+
     if (unitId === 'rifleman' && this.activeUpgrades.includes('barracks-1')) {
       maxHp = Math.round(maxHp * 1.2);
     }
 
-    let damage = def.stats.damage;
     if (this.activeUpgrades.includes('armory-1')) {
       damage = Math.round(damage * 1.1);
     }
@@ -142,6 +159,8 @@ export class BattleSystem {
       healPower = Math.round(healPower * 1.3);
     }
 
+    const combatantColor = soldier && soldier.colorTint !== 0xffffff ? soldier.colorTint : def.placeholder.color;
+
     const c = this.addCombatant(def.id, 'ally', FIELD.SPAWN_ALLY_X, {
       maxHp,
       damage,
@@ -149,7 +168,7 @@ export class BattleSystem {
       range: def.stats.range,
       moveSpeed: def.stats.moveSpeed,
       armor: def.stats.armor,
-      color: def.placeholder.color,
+      color: combatantColor,
       label: def.placeholder.label,
       tags: def.tags || [],
       traits: def.traits ? def.traits.map(t => t.id) : [],
@@ -157,6 +176,14 @@ export class BattleSystem {
       healRadius: (def.stats as any).healRadius,
       maxTargets: (def.stats as any).maxTargets,
     }, customLane);
+
+    if (c && soldier) {
+      c.soldierId = soldier.id;
+      c.nickname = soldier.nickname;
+      c.level = soldier.level;
+      c.colorTint = soldier.colorTint;
+      c.kills = 0;
+    }
 
     // Habilidad barricada del Engineer
     if (c && c.traits.includes('build-barricade')) {
@@ -482,7 +509,7 @@ export class BattleSystem {
       target.burnTickTimer = 1000;
     }
 
-    if (target.hp <= 0) this.kill(target, attacker.faction);
+    if (target.hp <= 0) this.kill(target, attacker);
   }
 
   private dealAoEDamage(attacker: Combatant, primaryTarget: Combatant): void {
@@ -497,7 +524,7 @@ export class BattleSystem {
           const baseDmg = this.getModifiedDamage(attacker);
           const dmg = Math.max(1, baseDmg - o.armor);
           o.hp -= dmg;
-          if (o.hp <= 0) this.kill(o, attacker.faction);
+          if (o.hp <= 0) this.kill(o, attacker);
         }
       }
       return;
@@ -518,7 +545,7 @@ export class BattleSystem {
     }
   }
 
-  private kill(c: Combatant, killerFaction: Faction): void {
+  private kill(c: Combatant, killer: Combatant | Faction): void {
     if (!c.alive) return;
 
     if (c.defId === 'exploder') {
@@ -536,14 +563,33 @@ export class BattleSystem {
       faction: c.faction,
       defId: c.defId,
       x: c.x,
-      y: FIELD.LANES_Y[c.lane]
+      y: FIELD.LANES_Y[c.lane],
+      uid: c.uid
     });
+
+    let killerFaction: Faction;
+    let attackerCombatant: Combatant | null = null;
+    if (typeof killer === 'string') {
+      killerFaction = killer;
+    } else {
+      killerFaction = killer.faction;
+      attackerCombatant = killer;
+    }
 
     if (c.faction === 'enemy' && killerFaction === 'ally') {
       const def = ENEMY_INDEX[c.defId];
       const bounty = def?.bounty ?? 0;
       this.supplies += bounty;
       this.pendingEvents.push({ type: 'bounty', amount: bounty, defId: c.defId });
+
+      // Track kill on the attacker combatant if it is an ally
+      if (attackerCombatant && attackerCombatant.faction === 'ally') {
+        if (attackerCombatant.kills === undefined) {
+          attackerCombatant.kills = 0;
+        }
+        attackerCombatant.kills++;
+      }
+
       // Aumento de moral por muerte enemiga
       const isElite = c.tags.includes('elite') || c.tags.includes('officer');
       const moraleGain = isElite ? MORALE.PER_ELITE_KILL : MORALE.PER_KILL;

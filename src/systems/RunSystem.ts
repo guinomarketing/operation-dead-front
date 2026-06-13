@@ -1,12 +1,44 @@
-import type { RunState, RunMapDef, RunNodeDef, NodeType, RunEffect } from '../types/RunTypes';
+import type { RunState, RunMapDef, RunNodeDef, NodeType, RunEffect, RosterSoldier } from '../types/RunTypes';
 import { BASES, MORALE } from '../utils/constants';
 
+const NOMBRES = ['Juan', 'Esteban', 'Santiago', 'Ignacio', 'Facundo', 'Lautaro', 'Bautista', 'Mateo', 'Rodrigo', 'Lucas', 'Enzo', 'Lionel', 'Beto', 'Cacho', 'Tito', 'Gato', 'Charly', 'Diego', 'Lucho', 'Felipe'];
+const APELLIDOS = ['Pérez', 'Rodríguez', 'González', 'Gómez', 'Fernández', 'López', 'Martínez', 'Álvarez', 'Romero', 'Sosa', 'Benítez', 'Giménez', 'Medina', 'Herrera', 'Castro', 'Paz', 'Ortega', 'Rojas', 'Díaz', 'Silva'];
+const APODOS = ['El Toro', 'El Gaucho', 'Lobo', 'Pájaro', 'Pulga', 'Pampa', 'Carancho', 'Comadreja', 'Víbora', 'Yacaré', 'Facha', 'Manco', 'Flaco', 'Gordo', 'Chino', 'Negro', 'Pibe', 'El Capo', 'La Fiera', 'Cuchillo'];
+
 export class RunSystem {
+  static generateRandomSoldier(unitId: string): RosterSoldier {
+    const id = 'soldier_' + Math.random().toString(36).substring(2, 9);
+    const name = NOMBRES[Math.floor(Math.random() * NOMBRES.length)] + ' ' + APELLIDOS[Math.floor(Math.random() * APELLIDOS.length)];
+    const nickname = APODOS[Math.floor(Math.random() * APODOS.length)];
+    return {
+      id,
+      unitId,
+      name,
+      nickname,
+      level: 1,
+      xp: 0,
+      colorTint: 0xffffff,
+      status: 'ready',
+      kills: 0,
+    };
+  }
+
   /**
-   * Inicializa un nuevo estado de run limpio.
+   * Inicializa un nuevo estado de run limpio con el plantel (roster) inicial.
    */
   static startNewRun(operationId: string = 'first-light', commanderId: string = 'miller'): RunState {
     const seed = Math.random().toString(36).substring(2, 10);
+    const roster: RosterSoldier[] = [
+      RunSystem.generateRandomSoldier('rifleman'),
+      RunSystem.generateRandomSoldier('rifleman'),
+      RunSystem.generateRandomSoldier('rifleman'),
+      RunSystem.generateRandomSoldier('heavy-gunner'),
+      RunSystem.generateRandomSoldier('medic'),
+      RunSystem.generateRandomSoldier('engineer'),
+      RunSystem.generateRandomSoldier('sniper'),
+      RunSystem.generateRandomSoldier('flamethrower')
+    ];
+
     return {
       operationId,
       commanderId,
@@ -26,6 +58,7 @@ export class RunSystem {
       intelEarned: 0,
       medalsEarned: 0,
       kills: 0,
+      roster,
     };
   }
 

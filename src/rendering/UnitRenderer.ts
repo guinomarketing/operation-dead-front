@@ -67,11 +67,14 @@ export class UnitRenderer {
         sourceH = srcImg.height;
       }
       this.sprite.setDisplaySize(dispW, dispH);
+      if (c.faction === 'ally' && c.colorTint && c.colorTint !== 0xffffff) {
+        this.sprite.setTint(c.colorTint);
+      }
     } else {
       // Fallback: create a colored rectangle image via a temp texture
       this.sprite = scene.add.image(c.x, y, '__DEFAULT');
       this.sprite.setDisplaySize(dispW, dispH);
-      this.sprite.setTint(c.color);
+      this.sprite.setTint(c.faction === 'ally' && c.colorTint && c.colorTint !== 0xffffff ? c.colorTint : c.color);
     }
 
     // Flip enemies to face left
@@ -90,12 +93,26 @@ export class UnitRenderer {
     this.hpBarTrail = scene.add.rectangle(-barW / 2, barY, barW, barH - 1, COLORS.hpTrail).setOrigin(0, 0.5);
     this.hpBarFill = scene.add.rectangle(-barW / 2, barY, barW, barH - 1, COLORS.hpGood).setOrigin(0, 0.5);
 
-    // Container to group everything (easier positioning)
-    this.container = scene.add.container(c.x, y, [
+    const containerElements: Phaser.GameObjects.GameObject[] = [
       this.hpBarBg,
       this.hpBarTrail,
       this.hpBarFill,
-    ]);
+    ];
+
+    if (c.faction === 'ally' && c.nickname) {
+      const nameText = scene.add.text(0, barY - 14, `${c.nickname} [Niv.${c.level || 1}]`, {
+        fontFamily: 'var(--font-ui)',
+        fontSize: '10px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 2,
+      }).setOrigin(0.5);
+      containerElements.push(nameText);
+    }
+
+    // Container to group everything (easier positioning)
+    this.container = scene.add.container(c.x, y, containerElements as any);
     this.container.setDepth(y);
 
     this.sprite.setDepth(y + 1);
