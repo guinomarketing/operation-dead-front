@@ -42,9 +42,9 @@ export const FIELD = {
   ENEMY_BASE_X: 896, // centro del bastión enemigo (derecha)
   SPAWN_ALLY_X: 140, // las tropas aparecen pasando la trinchera
   SPAWN_ENEMY_X: 820, // los revenants salen del búnker
-  // 4 carriles repartidos verticalmente en la zona [BATTLEFIELD_TOP+inset, BATTLEFIELD_BOTTOM-inset].
-  // Centro vertical de cada carril (de arriba hacia abajo).
-  LANES_Y: [168, 248, 328, 396] as const,
+  // 4 carriles sobre la franja de suelo plano del fondo (battlefield.jpg).
+  // Centro vertical (pies de la unidad) de cada carril, de atrás (arriba) a adelante (abajo).
+  LANES_Y: [256, 308, 360, 410] as const,
   UNIT_SEPARATION: 28, // px mínimos entre unidades del mismo carril
   /** Centro vertical del campo (para bases y splashes). */
   get CENTER_Y() {
@@ -66,6 +66,14 @@ export const FIELD = {
       }
     }
     return best;
+  },
+  /**
+   * Escala de profundidad por carril (fake 2.5D): los carriles de atrás (índice
+   * bajo, más arriba en pantalla) se ven más chicos; los de adelante, más grandes.
+   */
+  laneScale(lane: number): number {
+    const n = Math.max(1, this.LANES_Y.length - 1);
+    return 0.84 + (lane / n) * 0.22; // 0.84 (atrás) → 1.06 (adelante)
   },
 } as const;
 

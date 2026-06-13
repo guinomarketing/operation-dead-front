@@ -350,7 +350,17 @@ export class BattleSystem {
   private advance(c: Combatant, dt: number): void {
     const dir = c.faction === 'ally' ? 1 : -1;
     const speed = this.getModifiedMoveSpeed(c);
-    c.x += dir * speed * dt;
+    let newX = c.x + dir * speed * dt;
+
+    // Frontline: no rebasar al compañero de adelante en el mismo carril.
+    // Las unidades se forman en línea y empujan el frente (sensación Warfare 1917).
+    const sep = FIELD.UNIT_SEPARATION;
+    for (const o of this.combatants) {
+      if (o.uid === c.uid || !o.alive || o.faction !== c.faction || o.lane !== c.lane) continue;
+      if (dir > 0 && o.x > c.x) newX = Math.min(newX, o.x - sep);
+      else if (dir < 0 && o.x < c.x) newX = Math.max(newX, o.x + sep);
+    }
+    c.x = newX;
   }
 
   private atEnemyBase(c: Combatant): boolean {
