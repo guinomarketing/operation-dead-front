@@ -73,6 +73,9 @@ export class SpriteFactory {
         weaponType: 'flamer',
       });
     }
+    if (!scene.textures.exists('unit-barricade')) {
+      SpriteFactory.makeBarricadeTexture(scene, 'unit-barricade');
+    }
 
     // ── Enemy units ──
     if (!scene.textures.exists('enemy-revenant-grunt')) {
@@ -614,6 +617,53 @@ export class SpriteFactory {
     }
 
     ctx.putImageData(imgData, 0, 0);
+    canvas.refresh();
+  }
+
+  private static makeBarricadeTexture(scene: Phaser.Scene, key: string): void {
+    const canvas = scene.textures.createCanvas(key, TEX_W, TEX_H);
+    if (!canvas) return;
+    const ctx = canvas.getContext();
+
+    // Shadow on ground
+    ctx.fillStyle = rgba(0x000000, 0.3);
+    ctx.beginPath();
+    ctx.ellipse(TEX_W / 2, 85, 26, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sandbags stacking
+    ctx.fillStyle = rgba(0x8a7a5c); // Sandbag dark color
+    // Row 1 (Bottom)
+    ctx.fillRect(8, 70, 16, 12);
+    ctx.fillRect(24, 70, 16, 12);
+    ctx.fillRect(40, 70, 16, 12);
+
+    // Row 2 (Middle)
+    ctx.fillStyle = rgba(0x9a8a6c); // Sandbag lighter color
+    ctx.fillRect(16, 58, 16, 12);
+    ctx.fillRect(32, 58, 16, 12);
+
+    // Row 3 (Top)
+    ctx.fillStyle = rgba(0x7a6a4c); // Sandbag shadow color
+    ctx.fillRect(24, 46, 16, 12);
+
+    // Details / Lines
+    ctx.strokeStyle = rgba(0x3a3020);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(8, 70, 16, 12);
+    ctx.strokeRect(24, 70, 16, 12);
+    ctx.strokeRect(40, 70, 16, 12);
+    ctx.strokeRect(16, 58, 16, 12);
+    ctx.strokeRect(32, 58, 16, 12);
+    ctx.strokeRect(24, 46, 16, 12);
+
+    // Wooden beams support at the back
+    ctx.fillStyle = rgba(0x5a3e1a);
+    ctx.fillRect(10, 40, 4, 30);
+    ctx.fillRect(50, 40, 4, 30);
+    ctx.strokeRect(10, 40, 4, 30);
+    ctx.strokeRect(50, 40, 4, 30);
+
     canvas.refresh();
   }
 }

@@ -1,3 +1,4 @@
+import Phaser from 'phaser';
 import { UNIT_INDEX } from '../data/units';
 import { DEPLOYABLE } from '../scenes/BattleScene';
 
@@ -9,9 +10,20 @@ export class BattleUI {
   private allyHpText!: HTMLElement;
   private enemyHpBarInner!: HTMLElement;
   private enemyHpText!: HTMLElement;
+  private moraleBarInner!: HTMLElement;
+  private moraleText!: HTMLElement;
+  
   private cards: Record<string, { el: HTMLElement, costEl: HTMLElement, cdOverlay: HTMLElement }> = {};
+  private abilityButtons: Record<string, { el: HTMLElement, costEl: HTMLElement, cdOverlay: HTMLElement }> = {};
+  
+  private selectedUnitId: string | null = null;
+  private selectedAbilityId: string | null = null;
 
-  constructor(private onDeploy: (unitId: string) => void) {
+  constructor(
+    private scene: Phaser.Scene,
+    private onSelectCard: (unitId: string) => void,
+    private onSelectAbility: (abilityId: string) => void
+  ) {
     this.container = document.getElementById('ui-layer')!;
     this.build();
   }
@@ -19,7 +31,7 @@ export class BattleUI {
   private build() {
     this.container.innerHTML = '';
     
-    // Contenedor del HUD superior (Glassmorphism)
+    // Contenedor del HUD superior (Glassmorphism / Panel Militar)
     const topHud = document.createElement('div');
     topHud.className = 'glass-panel';
     topHud.style.position = 'absolute';
@@ -27,48 +39,86 @@ export class BattleUI {
     topHud.style.left = '50%';
     topHud.style.transform = 'translateX(-50%)';
     topHud.style.width = '96%';
-    topHud.style.padding = '10px 20px';
+    topHud.style.padding = '8px 16px';
     topHud.style.display = 'flex';
     topHud.style.justifyContent = 'space-between';
     topHud.style.alignItems = 'center';
     topHud.style.boxSizing = 'border-box';
     
-    // Izquierda: Suministros y Kills
+    // Izquierda: Suministros, Kills y Moral
     const statsDiv = document.createElement('div');
     statsDiv.style.display = 'flex';
-    statsDiv.style.gap = '20px';
+    statsDiv.style.alignItems = 'center';
+    statsDiv.style.gap = '15px';
 
     const suppliesDiv = document.createElement('div');
-    suppliesDiv.innerHTML = `<span style="color:var(--primary); font-size:14px; font-weight:bold;">SUPPLIES</span><br/>`;
+    suppliesDiv.innerHTML = `<span style="color:var(--primary); font-size:11px; font-weight:bold; letter-spacing:1px;">SUPPLIES</span><br/>`;
     this.suppliesEl = document.createElement('span');
-    this.suppliesEl.style.fontSize = '24px';
+    this.suppliesEl.style.fontSize = '20px';
     this.suppliesEl.style.fontFamily = 'var(--font-title)';
     this.suppliesEl.innerText = '0';
     suppliesDiv.appendChild(this.suppliesEl);
 
     const killsDiv = document.createElement('div');
-    killsDiv.innerHTML = `<span style="color:#aaa; font-size:14px; font-weight:bold;">KILLS</span><br/>`;
+    killsDiv.innerHTML = `<span style="color:#aaa; font-size:11px; font-weight:bold; letter-spacing:1px;">KILLS</span><br/>`;
     this.killsEl = document.createElement('span');
-    this.killsEl.style.fontSize = '24px';
+    this.killsEl.style.fontSize = '20px';
     this.killsEl.style.fontFamily = 'var(--font-title)';
     this.killsEl.innerText = '0';
     killsDiv.appendChild(this.killsEl);
 
+    // Barra de Moral
+    const moraleDiv = document.createElement('div');
+    moraleDiv.style.width = '100px';
+    moraleDiv.innerHTML = `<span style="color:#eab308; font-size:11px; font-weight:bold; letter-spacing:1px;">MORALE</span><br/>`;
+    
+    const moraleBarBg = document.createElement('div');
+    moraleBarBg.style.width = '100%';
+    moraleBarBg.style.height = '12px';
+    moraleBarBg.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    moraleBarBg.style.borderRadius = '2px';
+    moraleBarBg.style.overflow = 'hidden';
+    moraleBarBg.style.border = '1px solid rgba(255,255,255,0.2)';
+    moraleBarBg.style.position = 'relative';
+    moraleBarBg.style.marginTop = '2px';
+    
+    this.moraleBarInner = document.createElement('div');
+    this.moraleBarInner.style.height = '100%';
+    this.moraleBarInner.style.width = '70%'; // inicia en 70
+    this.moraleBarInner.style.backgroundColor = '#fbbf24';
+    this.moraleBarInner.style.transition = 'width 0.3s ease, background-color 0.3s ease';
+    
+    this.moraleText = document.createElement('div');
+    this.moraleText.style.position = 'absolute';
+    this.moraleText.style.width = '100%';
+    this.moraleText.style.textAlign = 'center';
+    this.moraleText.style.top = '0';
+    this.moraleText.style.fontSize = '9px';
+    this.moraleText.style.fontWeight = 'bold';
+    this.moraleText.style.lineHeight = '12px';
+    this.moraleText.style.color = '#fff';
+    this.moraleText.innerText = '70/100';
+    
+    moraleBarBg.appendChild(this.moraleBarInner);
+    moraleBarBg.appendChild(this.moraleText);
+    moraleDiv.appendChild(moraleBarBg);
+
     statsDiv.appendChild(suppliesDiv);
     statsDiv.appendChild(killsDiv);
+    statsDiv.appendChild(moraleDiv);
 
-    // Derecha: Bases HP
+    // Derecha: HP de las Bases
     const basesDiv = document.createElement('div');
     basesDiv.style.display = 'flex';
-    basesDiv.style.gap = '30px';
+    basesDiv.style.gap = '15px';
 
-    // Ally Base
-    const allyDiv = this.createHpBar('HQ', '#10b981');
+    // Base Aliada HQ
+    const allyDiv = this.createHpBar('HQ', '#3b82f6');
     this.allyHpBarInner = allyDiv.barInner;
     this.allyHpText = allyDiv.text;
     basesDiv.appendChild(allyDiv.container);
 
-    // Enemy Base
+    // Bastión Enemigo BASTION
     const enemyDiv = this.createHpBar('BASTION', '#ef4444');
     this.enemyHpBarInner = enemyDiv.barInner;
     this.enemyHpText = enemyDiv.text;
@@ -77,62 +127,63 @@ export class BattleUI {
     topHud.appendChild(statsDiv);
     topHud.appendChild(basesDiv);
 
-    // Contenedor de Botones de Despliegue (Bottom)
-    const bottomHud = document.createElement('div');
-    bottomHud.style.position = 'absolute';
-    bottomHud.style.bottom = '20px';
-    bottomHud.style.left = '50%';
-    bottomHud.style.transform = 'translateX(-50%)';
-    bottomHud.style.display = 'flex';
-    bottomHud.style.gap = '15px';
+    // Contenedor Maestro de la Consola Inferior (Abilities + Deploy)
+    const consoleContainer = document.createElement('div');
+    consoleContainer.style.position = 'absolute';
+    consoleContainer.style.bottom = '15px';
+    consoleContainer.style.left = '50%';
+    consoleContainer.style.transform = 'translateX(-50%)';
+    consoleContainer.style.display = 'flex';
+    consoleContainer.style.flexDirection = 'column';
+    consoleContainer.style.alignItems = 'center';
+    consoleContainer.style.pointerEvents = 'none';
 
-    // Deployable units in MVP 0.2
-    for (const unitId of DEPLOYABLE) {
-      const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
+    // Fila 1: Habilidades de Comandante (Artillería y Médicos)
+    const abilitiesRow = document.createElement('div');
+    abilitiesRow.style.display = 'flex';
+    abilitiesRow.style.gap = '20px';
+    abilitiesRow.style.marginBottom = '10px';
+    abilitiesRow.style.pointerEvents = 'auto';
+
+    const abilityDefs = [
+      { id: 'airstrike', label: '💥 AIRSTRIKE', cost: 50 },
+      { id: 'medkit', label: '✚ MEDKIT', cost: 30 }
+    ];
+
+    for (const ab of abilityDefs) {
+      const btn = document.createElement('div');
+      btn.className = 'glass-panel';
+      btn.style.width = '105px';
+      btn.style.height = '40px';
+      btn.style.display = 'flex';
+      btn.style.flexDirection = 'column';
+      btn.style.alignItems = 'center';
+      btn.style.justifyContent = 'center';
+      btn.style.cursor = 'pointer';
+      btn.style.position = 'relative';
+      btn.style.overflow = 'hidden';
+      btn.style.border = '2px solid var(--panel-border)';
+      btn.style.transition = 'transform 0.1s, border-color 0.1s, box-shadow 0.1s';
       
-      const card = document.createElement('div');
-      card.className = 'glass-panel';
-      card.style.width = '100px';
-      card.style.height = '120px';
-      card.style.position = 'relative';
-      card.style.display = 'flex';
-      card.style.flexDirection = 'column';
-      card.style.alignItems = 'center';
-      card.style.justifyContent = 'flex-end';
-      card.style.paddingBottom = '10px';
-      card.style.cursor = 'pointer';
-      card.style.transition = 'transform 0.1s';
-      card.style.overflow = 'hidden';
+      btn.onmousedown = () => btn.style.transform = 'scale(0.95)';
+      btn.onmouseup = () => { btn.style.transform = 'scale(1)'; this.onSelectAbility(ab.id); };
+      btn.onmouseleave = () => btn.style.transform = 'scale(1)';
 
-      card.onmousedown = () => card.style.transform = 'scale(0.95)';
-      card.onmouseup = () => { card.style.transform = 'scale(1)'; this.onDeploy(unitId); };
-      card.onmouseleave = () => card.style.transform = 'scale(1)';
-
-      // Character Icon
-      const icon = document.createElement('img');
-      icon.src = `/assets/sprites/unit-${unitId}.png`;
-      icon.style.width = '64px';
-      icon.style.height = '64px';
-      icon.style.objectFit = 'contain';
-      icon.style.position = 'absolute';
-      icon.style.top = '10px';
-      icon.style.imageRendering = 'pixelated';
-
-      const name = document.createElement('div');
-      name.innerText = def.name;
-      name.style.fontSize = '14px';
-      name.style.fontWeight = 'bold';
-      name.style.marginTop = 'auto';
+      const text = document.createElement('div');
+      text.innerText = ab.label;
+      text.style.fontSize = '11px';
+      text.style.fontWeight = 'bold';
+      text.style.color = '#fff';
 
       const cost = document.createElement('div');
-      cost.innerText = `⬢ ${def.cost}`;
-      cost.style.fontSize = '14px';
+      cost.innerText = `⬢ ${ab.cost}`;
+      cost.style.fontSize = '11px';
       cost.style.color = 'var(--primary)';
       cost.style.fontFamily = 'var(--font-title)';
 
       const cdOverlay = document.createElement('div');
       cdOverlay.style.position = 'absolute';
-      cdOverlay.style.top = '0';
+      cdOverlay.style.bottom = '0';
       cdOverlay.style.left = '0';
       cdOverlay.style.width = '100%';
       cdOverlay.style.height = '100%';
@@ -140,7 +191,83 @@ export class BattleUI {
       cdOverlay.style.transformOrigin = 'bottom';
       cdOverlay.style.transform = 'scaleY(0)';
       cdOverlay.style.pointerEvents = 'none';
-      cdOverlay.style.transition = 'transform 0.1s linear';
+
+      btn.appendChild(cdOverlay);
+      btn.appendChild(text);
+      btn.appendChild(cost);
+      
+      this.abilityButtons[ab.id] = { el: btn, costEl: cost, cdOverlay };
+      abilitiesRow.appendChild(btn);
+    }
+
+    // Fila 2: Cartas de Unidades
+    const deployRow = document.createElement('div');
+    deployRow.style.display = 'flex';
+    deployRow.style.gap = '8px';
+    deployRow.style.pointerEvents = 'auto';
+
+    for (const unitId of DEPLOYABLE) {
+      const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
+      
+      const card = document.createElement('div');
+      card.className = 'glass-panel';
+      card.style.width = '80px';
+      card.style.height = '105px';
+      card.style.position = 'relative';
+      card.style.display = 'flex';
+      card.style.flexDirection = 'column';
+      card.style.alignItems = 'center';
+      card.style.justifyContent = 'flex-end';
+      card.style.paddingBottom = '6px';
+      card.style.cursor = 'pointer';
+      card.style.transition = 'transform 0.1s, border-color 0.1s, box-shadow 0.1s';
+      card.style.overflow = 'hidden';
+
+      card.onmousedown = () => card.style.transform = 'scale(0.95)';
+      card.onmouseup = () => { card.style.transform = 'scale(1)'; this.onSelectCard(unitId); };
+      card.onmouseleave = () => card.style.transform = 'scale(1)';
+
+      // Character Icon - Extraído como Base64 desde el motor de render
+      const icon = document.createElement('img');
+      const textureKey = `unit-${unitId}`;
+      if (this.scene.textures.exists(textureKey)) {
+        try {
+          icon.src = this.scene.textures.getBase64(textureKey);
+        } catch (e) {
+          icon.src = `/assets/sprites/unit-${unitId}.png`;
+        }
+      } else {
+        icon.src = `/assets/sprites/unit-${unitId}.png`;
+      }
+      icon.style.width = '48px';
+      icon.style.height = '48px';
+      icon.style.objectFit = 'contain';
+      icon.style.position = 'absolute';
+      icon.style.top = '6px';
+      icon.style.imageRendering = 'pixelated';
+
+      const name = document.createElement('div');
+      name.innerText = def.name;
+      name.style.fontSize = '11px';
+      name.style.fontWeight = 'bold';
+      name.style.marginTop = 'auto';
+
+      const cost = document.createElement('div');
+      cost.innerText = `⬢ ${def.cost}`;
+      cost.style.fontSize = '11px';
+      cost.style.color = 'var(--primary)';
+      cost.style.fontFamily = 'var(--font-title)';
+
+      const cdOverlay = document.createElement('div');
+      cdOverlay.style.position = 'absolute';
+      cdOverlay.style.bottom = '0';
+      cdOverlay.style.left = '0';
+      cdOverlay.style.width = '100%';
+      cdOverlay.style.height = '100%';
+      cdOverlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
+      cdOverlay.style.transformOrigin = 'bottom';
+      cdOverlay.style.transform = 'scaleY(0)';
+      cdOverlay.style.pointerEvents = 'none';
 
       card.appendChild(cdOverlay);
       card.appendChild(icon);
@@ -148,29 +275,32 @@ export class BattleUI {
       card.appendChild(cost);
 
       this.cards[unitId] = { el: card, costEl: cost, cdOverlay };
-      bottomHud.appendChild(card);
+      deployRow.appendChild(card);
     }
 
+    consoleContainer.appendChild(abilitiesRow);
+    consoleContainer.appendChild(deployRow);
+    
     this.container.appendChild(topHud);
-    this.container.appendChild(bottomHud);
+    this.container.appendChild(consoleContainer);
   }
 
   private createHpBar(label: string, color: string) {
     const container = document.createElement('div');
-    container.style.width = '150px';
+    container.style.width = '110px';
 
     const title = document.createElement('div');
     title.innerText = label;
-    title.style.fontSize = '12px';
+    title.style.fontSize = '10px';
     title.style.fontWeight = 'bold';
     title.style.color = color;
-    title.style.marginBottom = '4px';
+    title.style.marginBottom = '2px';
 
     const barBg = document.createElement('div');
     barBg.style.width = '100%';
-    barBg.style.height = '12px';
+    barBg.style.height = '10px';
     barBg.style.backgroundColor = 'rgba(0,0,0,0.5)';
-    barBg.style.borderRadius = '6px';
+    barBg.style.borderRadius = '2px';
     barBg.style.overflow = 'hidden';
     barBg.style.border = '1px solid rgba(255,255,255,0.2)';
     barBg.style.position = 'relative';
@@ -179,14 +309,17 @@ export class BattleUI {
     barInner.style.height = '100%';
     barInner.style.backgroundColor = color;
     barInner.style.width = '100%';
-    barInner.style.transition = 'width 0.2s, background-color 0.2s';
+    barInner.style.transition = 'width 0.2s';
 
     const text = document.createElement('div');
     text.style.position = 'absolute';
-    text.style.right = '4px';
+    text.style.width = '100%';
+    text.style.textAlign = 'center';
     text.style.top = '0';
-    text.style.fontSize = '10px';
-    text.style.lineHeight = '12px';
+    text.style.fontSize = '8px';
+    text.style.lineHeight = '10px';
+    text.style.color = '#fff';
+    text.style.fontWeight = 'bold';
 
     barBg.appendChild(barInner);
     barBg.appendChild(text);
@@ -205,19 +338,35 @@ export class BattleUI {
     enemyHp: number;
     enemyMaxHp: number;
     cooldowns: Map<string, number>;
+    morale: number;
   }) {
+    // Suministros y Bajas
     this.suppliesEl.innerText = Math.floor(state.supplies).toString();
     this.killsEl.innerText = state.killCount.toString();
 
+    // Moral
+    const moralePct = Math.max(0, state.morale / 100);
+    this.moraleBarInner.style.width = `${moralePct * 100}%`;
+    this.moraleText.innerText = `${Math.ceil(state.morale)}/100`;
+    if (state.morale > 50) {
+      this.moraleBarInner.style.backgroundColor = '#fbbf24';
+    } else if (state.morale > 25) {
+      this.moraleBarInner.style.backgroundColor = '#f97316'; // orange
+    } else {
+      this.moraleBarInner.style.backgroundColor = '#ef4444'; // red
+    }
+
+    // HQ base HP
     const allyPct = Math.max(0, state.allyHp / state.allyMaxHp);
     this.allyHpBarInner.style.width = `${allyPct * 100}%`;
-    this.allyHpBarInner.style.backgroundColor = allyPct > 0.3 ? '#10b981' : '#ef4444';
     this.allyHpText.innerText = `${Math.ceil(state.allyHp)}/${state.allyMaxHp}`;
 
+    // Bastion base HP
     const enemyPct = Math.max(0, state.enemyHp / state.enemyMaxHp);
     this.enemyHpBarInner.style.width = `${enemyPct * 100}%`;
     this.enemyHpText.innerText = `${Math.ceil(state.enemyHp)}/${state.enemyMaxHp}`;
 
+    // Actualizar Cooldown y Economía de Unidades
     for (const [unitId, card] of Object.entries(this.cards)) {
       const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
       const affordable = state.supplies >= def.cost;
@@ -230,7 +379,101 @@ export class BattleUI {
       } else {
         card.cdOverlay.style.transform = `scaleY(0)`;
       }
+
+      if (this.selectedUnitId !== unitId) {
+        card.el.style.opacity = cd > 0 || !affordable ? '0.6' : '1';
+      }
     }
+
+    // Actualizar Cooldown y Economía de Habilidades
+    const abilityCosts = { airstrike: 50, medkit: 30 };
+    const abilityCds = { airstrike: 45000, medkit: 25000 };
+
+    for (const [abId, btn] of Object.entries(this.abilityButtons)) {
+      const cost = abilityCosts[abId as keyof typeof abilityCosts];
+      const maxCd = abilityCds[abId as keyof typeof abilityCds];
+      const affordable = state.supplies >= cost;
+      btn.costEl.style.color = affordable ? 'var(--primary)' : '#ef4444';
+
+      const cd = state.cooldowns.get(abId) ?? 0;
+      if (cd > 0) {
+        const pct = cd / maxCd;
+        btn.cdOverlay.style.transform = `scaleY(${pct})`;
+      } else {
+        btn.cdOverlay.style.transform = `scaleY(0)`;
+      }
+
+      if (this.selectedAbilityId !== abId) {
+        btn.el.style.opacity = cd > 0 || !affordable ? '0.6' : '1';
+      }
+    }
+  }
+
+  public setSelectedUnit(unitId: string | null) {
+    this.selectedUnitId = unitId;
+    this.selectedAbilityId = null;
+
+    // Resetear bordes de habilidades
+    for (const btn of Object.values(this.abilityButtons)) {
+      btn.el.style.borderColor = 'var(--panel-border)';
+      btn.el.style.boxShadow = '4px 4px 0px rgba(0, 0, 0, 0.9)';
+    }
+
+    // Pintar borde de cartas
+    for (const [id, card] of Object.entries(this.cards)) {
+      if (id === unitId) {
+        card.el.style.borderColor = '#fbbf24';
+        card.el.style.boxShadow = '0 0 12px #fbbf24';
+        card.el.style.opacity = '1';
+      } else {
+        card.el.style.borderColor = 'var(--panel-border)';
+        card.el.style.boxShadow = '4px 4px 0px rgba(0, 0, 0, 0.9)';
+      }
+    }
+  }
+
+  public setSelectedAbility(abilityId: string | null) {
+    this.selectedAbilityId = abilityId;
+    this.selectedUnitId = null;
+
+    // Resetear bordes de cartas
+    for (const card of Object.values(this.cards)) {
+      card.el.style.borderColor = 'var(--panel-border)';
+      card.el.style.boxShadow = '4px 4px 0px rgba(0, 0, 0, 0.9)';
+    }
+
+    // Pintar borde de habilidades
+    for (const [id, btn] of Object.entries(this.abilityButtons)) {
+      if (id === abilityId) {
+        btn.el.style.borderColor = '#ef4444';
+        btn.el.style.boxShadow = '0 0 12px #ef4444';
+        btn.el.style.opacity = '1';
+      } else {
+        btn.el.style.borderColor = 'var(--panel-border)';
+        btn.el.style.boxShadow = '4px 4px 0px rgba(0, 0, 0, 0.9)';
+      }
+    }
+  }
+
+  public clearSelection() {
+    this.setSelectedUnit(null);
+    this.setSelectedAbility(null);
+  }
+
+  public flashSupplies() {
+    const origColor = this.suppliesEl.style.color;
+    this.suppliesEl.style.color = '#ef4444';
+    this.scene.tweens.add({
+      targets: this.suppliesEl,
+      scaleX: 1.3,
+      scaleY: 1.3,
+      duration: 100,
+      yoyo: true,
+      onComplete: () => {
+        this.suppliesEl.style.color = origColor;
+        this.suppliesEl.style.scale = '1';
+      }
+    });
   }
 
   public destroy() {

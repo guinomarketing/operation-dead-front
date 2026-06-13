@@ -135,10 +135,12 @@ export class UnitRenderer {
     this.shadow.setDepth(y - 1);
     this.container.setDepth(y + 2);
 
-    // Walk animation (bobbing)
-    this.walkPhase += delta * 0.008;
-    const bobAmount = Math.sin(this.walkPhase) * 1.5;
-    this.sprite.y = y + bobAmount;
+    // Walk animation (bobbing - structures don't bob)
+    if (c.defId !== 'barricade') {
+      this.walkPhase += delta * 0.008;
+      const bobAmount = Math.sin(this.walkPhase) * 1.5;
+      this.sprite.y = y + bobAmount;
+    }
 
     // Attack flash
     if (this.attackFlashTimer > 0) {
@@ -199,21 +201,35 @@ export class UnitRenderer {
 
   /** Play death animation and clean up after. */
   playDeath(onComplete?: () => void): void {
-    // Fall animation
-    const fallDir = this.faction === 'ally' ? -1 : 1;
-
-    this.scene.tweens.add({
-      targets: this.sprite,
-      alpha: 0,
-      angle: fallDir * 90,
-      y: this.sprite.y + 10,
-      duration: 400,
-      ease: 'Power2',
-      onComplete: () => {
-        this.destroy();
-        onComplete?.();
-      },
-    });
+    // Fall animation (structures collapse downward instead of falling sideways)
+    if (this.sprite.texture.key === 'unit-barricade') {
+      this.scene.tweens.add({
+        targets: this.sprite,
+        alpha: 0,
+        scaleY: 0,
+        y: this.sprite.y + 15,
+        duration: 350,
+        ease: 'Linear',
+        onComplete: () => {
+          this.destroy();
+          onComplete?.();
+        },
+      });
+    } else {
+      const fallDir = this.faction === 'ally' ? -1 : 1;
+      this.scene.tweens.add({
+        targets: this.sprite,
+        alpha: 0,
+        angle: fallDir * 90,
+        y: this.sprite.y + 10,
+        duration: 400,
+        ease: 'Power2',
+        onComplete: () => {
+          this.destroy();
+          onComplete?.();
+        },
+      });
+    }
 
     // Fade out shadow and HP bar
     this.scene.tweens.add({

@@ -8,6 +8,7 @@ import { GAME_WIDTH, GAME_HEIGHT, FIELD } from '../utils/constants';
 import { COLORS, hex, FONTS } from '../ui/colors';
 import { BattleSystem, type Combatant } from '../systems/BattleSystem';
 import { UNIT_INDEX } from '../data/units';
+import { ABILITY_INDEX } from '../data/abilities';
 import { SpriteFactory } from '../rendering/SpriteFactory';
 import { UnitRenderer } from '../rendering/UnitRenderer';
 import { BattleUI } from '../ui/BattleUI';
@@ -31,6 +32,11 @@ export class BattleScene extends Phaser.Scene {
   private ashTimer?: Phaser.Time.TimerEvent;
   private vignette!: Phaser.GameObjects.Graphics;
 
+  // Selección y apuntado (MVP 0.2+)
+  private selectedUnitId: string | null = null;
+  private activeAbilityId: string | null = null;
+  private deployIndicators!: Phaser.GameObjects.Graphics;
+
   constructor() {
     super('Battle');
   }
@@ -40,16 +46,31 @@ export class BattleScene extends Phaser.Scene {
     this.renderers.clear();
     this.cooldowns.clear();
     this.killCount = 0;
+    this.selectedUnitId = null;
+    this.activeAbilityId = null;
 
     // Generate all textures
     SpriteFactory.ensureTextures(this);
+
+    // Deploy indicators
+    this.deployIndicators = this.add.graphics();
+    this.deployIndicators.setDepth(450);
 
     // Build the scene layers (order matters for depth)
     this.drawBattlefieldBackground();
     this.drawBases();
     this.startAmbientParticles();
-    this.ui = new BattleUI((unitId) => this.tryDeploy(unitId));
+    this.ui = new BattleUI(
+      this,
+      (unitId) => this.selectUnit(unitId),
+      (abilityId) => this.selectAbility(abilityId)
+    );
     this.drawVignette();
+
+    // Clics en el campo de batalla
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.handleBattlefieldClick(pointer.x, pointer.y);
+    });
 
     // Camera fade in
     this.cameras.main.fadeIn(600, 0, 0, 0);
@@ -63,6 +84,26 @@ export class BattleScene extends Phaser.Scene {
     const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'battlefield');
     bg.setDepth(-100);
     bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+
+    // Dibujar caminos visuales para los carriles
+    const pathG = this.add.graphics();
+    pathG.setDepth(-90);
+    for (const y of FIELD.LANES_Y) {
+      // Sendero de tierra marrón
+      pathG.fillStyle(0x3a2d1e, 0.4); 
+      pathG.fillRect(0, y - 18, GAME_WIDTH, 36);
+
+      // Bordes del sendero (tierra más oscura)
+      pathG.fillStyle(0x1a1610, 0.3);
+      pathG.fillRect(0, y - 20, GAME_WIDTH, 2);
+      pathG.fillRect(0, y + 18, GAME_WIDTH, 2);
+
+      // Postes pequeños decorativos a los lados
+      pathG.fillStyle(0x111111, 0.4);
+      for (let px = 20; px < GAME_WIDTH; px += 80) {
+        pathG.fillRect(px, y - 24, 2, 6);
+      }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -179,17 +220,223 @@ export class BattleScene extends Phaser.Scene {
   //  INPUT
   // ═══════════════════════════════════════════════════════════
 
-  private tryDeploy(unitId: string): void {
-    const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
+  private selectUnit(unitId: string): void {
     const cd = this.cooldowns.get(unitId) ?? 0;
     if (cd > 0) return;
     if (!this.sim.canAfford(unitId)) {
+      this.ui.flashSupplies();
       return;
     }
-    const c = this.sim.spawnAlly(unitId);
+
+    if (this.selectedUnitId === unitId) {
+      this.selectedUnitId = null;
+      this.ui.setSelectedUnit(null);
+    } else {
+      this.selectedUnitId = unitId;
+      this.activeAbilityId = null;
+      this.ui.setSelectedUnit(unitId);
+      this.ui.setSelectedAbility(null);
+    }
+  }
+
+  private selectAbility(abilityId: string): void {
+    const cd = this.cooldowns.get(abilityId) ?? 0;
+    if (cd > 0) return;
+    const def = ABILITY_INDEX[abilityId];
+    if (!def || this.sim.supplies < def.cost) {
+      this.ui.flashSupplies();
+      return;
+    }
+
+    if (this.activeAbilityId === abilityId) {
+      this.activeAbilityId = null;
+      this.ui.setSelectedAbility(null);
+    } else {
+      this.activeAbilityId = abilityId;
+      this.selectedUnitId = null;
+      this.ui.setSelectedAbility(abilityId);
+      this.ui.setSelectedUnit(null);
+    }
+  }
+
+  private handleBattlefieldClick(x: number, y: number): void {
+    if (this.selectedUnitId) {
+      // Si hace click dentro de la zona de combate vertical
+      if (y >= 420 && y <= 680) {
+        let lane = 1;
+        if (y < 505) lane = 0;
+        else if (y >= 580) lane = 2;
+
+        this.tryDeployInLane(this.selectedUnitId, lane);
+        this.selectedUnitId = null;
+        this.ui.setSelectedUnit(null);
+      } else {
+        this.selectedUnitId = null;
+        this.ui.setSelectedUnit(null);
+      }
+    } else if (this.activeAbilityId) {
+      this.useCommanderAbility(this.activeAbilityId, x, y);
+      this.activeAbilityId = null;
+      this.ui.setSelectedAbility(null);
+    }
+  }
+
+  private tryDeployInLane(unitId: string, lane: number): void {
+    const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
+    if (!this.sim.canAfford(unitId)) {
+      this.ui.flashSupplies();
+      return;
+    }
+    const c = this.sim.spawnAlly(unitId, lane);
     if (c) {
       this.cooldowns.set(unitId, def.deployCooldown);
       this.spawnUnit(c);
+      this.spawnDeployPuff(FIELD.SPAWN_ALLY_X, FIELD.LANES_Y[lane]);
+    }
+  }
+
+  private spawnDeployPuff(x: number, y: number): void {
+    for (let i = 0; i < 6; i++) {
+      const size = Phaser.Math.Between(4, 8);
+      const puff = this.add.circle(
+        x + Phaser.Math.Between(-10, 10),
+        y + 15,
+        size,
+        0x888877, // ash color
+        0.3
+      );
+      puff.setDepth(y + 10);
+      this.tweens.add({
+        targets: puff,
+        y: y - Phaser.Math.Between(10, 30),
+        x: puff.x + Phaser.Math.Between(-15, 15),
+        alpha: 0,
+        scale: 1.8,
+        duration: Phaser.Math.Between(300, 600),
+        onComplete: () => puff.destroy()
+      });
+    }
+  }
+
+  private useCommanderAbility(abilityId: string, x: number, y: number): void {
+    const def = ABILITY_INDEX[abilityId];
+    if (!def || this.sim.supplies < def.cost) {
+      this.ui.flashSupplies();
+      return;
+    }
+
+    this.cooldowns.set(abilityId, def.cooldown);
+    this.sim.supplies -= def.cost;
+
+    if (abilityId === 'airstrike') {
+      const crossG = this.add.graphics();
+      crossG.setDepth(800);
+      
+      this.tweens.add({
+        targets: crossG,
+        alpha: { from: 0.8, to: 0.2 },
+        duration: 200,
+        yoyo: true,
+        repeat: 4,
+        onUpdate: () => {
+          crossG.clear();
+          crossG.lineStyle(2, 0xc0432d, crossG.alpha);
+          crossG.strokeCircle(x, y, 60);
+          crossG.strokeCircle(x, y, 140);
+          crossG.lineBetween(x - 160, y, x + 160, y);
+          crossG.lineBetween(x, y - 160, x, y + 160);
+        },
+        onComplete: () => {
+          crossG.destroy();
+          // Shadow plane flying
+          const bomber = this.add.rectangle(-100, y - 50, 80, 40, 0x000000, 0.4);
+          bomber.setDepth(810);
+          this.tweens.add({
+            targets: bomber,
+            x: GAME_WIDTH + 100,
+            duration: 600,
+            onComplete: () => {
+              bomber.destroy();
+              this.sim.castAirstrike(x);
+              this.triggerAirstrikeExplosion(x, y);
+            }
+          });
+        }
+      });
+    } else if (abilityId === 'medkit') {
+      const healG = this.add.graphics();
+      healG.setDepth(790);
+      
+      this.tweens.add({
+        targets: healG,
+        alpha: { from: 0.7, to: 0 },
+        duration: 800,
+        onUpdate: () => {
+          healG.clear();
+          healG.fillStyle(0x7bbf4a, healG.alpha * 0.3);
+          healG.fillCircle(x, y, 120);
+          healG.lineStyle(3, 0x7bbf4a, healG.alpha);
+          healG.strokeCircle(x, y, 120);
+        },
+        onComplete: () => {
+          healG.destroy();
+        }
+      });
+
+      for (let i = 0; i < 8; i++) {
+        const hx = x + Phaser.Math.Between(-100, 100);
+        const hy = y + Phaser.Math.Between(-80, 80);
+        const plus = this.add.text(hx, hy, '+', {
+          fontFamily: FONTS.ui,
+          fontSize: '20px',
+          color: '#44ff88',
+          fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(800);
+        
+        this.tweens.add({
+          targets: plus,
+          y: hy - 40,
+          alpha: 0,
+          duration: 1000,
+          onComplete: () => plus.destroy()
+        });
+      }
+
+      this.sim.castMedkit(x);
+    }
+  }
+
+  private triggerAirstrikeExplosion(x: number, y: number): void {
+    this.cameras.main.shake(300, 0.015);
+    
+    const flash = this.add.circle(x, y, 140, 0xffaa44, 0.8);
+    flash.setDepth(850);
+    this.tweens.add({
+      targets: flash,
+      scaleX: 1.3,
+      scaleY: 1.3,
+      alpha: 0,
+      duration: 350,
+      onComplete: () => flash.destroy()
+    });
+
+    for (let i = 0; i < 18; i++) {
+      const size = Phaser.Math.Between(6, 14);
+      const color = Math.random() < 0.3 ? 0xffffff : (Math.random() < 0.5 ? 0xff5500 : 0xffaa00);
+      const spark = this.add.rectangle(x, y, size, size, color, 0.9);
+      spark.setDepth(860);
+      
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Phaser.Math.Between(40, 160);
+      this.tweens.add({
+        targets: spark,
+        x: x + Math.cos(angle) * dist,
+        y: y + Math.sin(angle) * dist,
+        alpha: 0,
+        angle: Phaser.Math.Between(-180, 180),
+        duration: Phaser.Math.Between(400, 800),
+        onComplete: () => spark.destroy()
+      });
     }
   }
 
@@ -345,6 +592,18 @@ export class BattleScene extends Phaser.Scene {
     // Refrescar HUD
     this.refreshHud();
 
+    // Dibujar indicadores de carril si hay unidad seleccionada
+    this.deployIndicators.clear();
+    if (this.selectedUnitId) {
+      const pulse = 0.4 + Math.sin(this.time.now * 0.015) * 0.15;
+      this.deployIndicators.fillStyle(0x7bbf4a, pulse);
+      for (const y of FIELD.LANES_Y) {
+        this.deployIndicators.fillRoundedRect(FIELD.SPAWN_ALLY_X - 30, y - 20, 60, 40, 6);
+        this.deployIndicators.lineStyle(2, 0x33aa22, pulse + 0.2);
+        this.deployIndicators.strokeRoundedRect(FIELD.SPAWN_ALLY_X - 30, y - 20, 60, 40, 6);
+      }
+    }
+
     // Cooldowns
     for (const [id, ms] of this.cooldowns) {
       const next = ms - delta;
@@ -411,7 +670,8 @@ export class BattleScene extends Phaser.Scene {
       allyMaxHp: this.sim.allyBaseMaxHp,
       enemyHp: this.sim.enemyBaseHp,
       enemyMaxHp: this.sim.enemyBaseMaxHp,
-      cooldowns: this.cooldowns
+      cooldowns: this.cooldowns,
+      morale: this.sim.morale
     });
   }
 

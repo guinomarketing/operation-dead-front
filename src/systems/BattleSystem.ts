@@ -2,7 +2,7 @@
  * BattleSystem — lógica de combate pura, sin Phaser.
  * Integra WaveSystem y lógica de habilidades/estados (MVP 0.2).
  */
-import { FIELD, BASES, ECONOMY } from '../utils/constants';
+import { FIELD, BASES, ECONOMY, MORALE } from '../utils/constants';
 import { UNIT_INDEX } from '../data/units';
 import { ENEMY_INDEX } from '../data/enemies';
 import { WaveSystem } from './WaveSystem';
@@ -56,6 +56,7 @@ export class BattleSystem {
   enemyBaseHp: number;
   enemyBaseMaxHp: number;
   supplies: number;
+  morale: number;
   outcome: BattleOutcome = 'ongoing';
   waveSys: WaveSystem;
 
@@ -69,6 +70,7 @@ export class BattleSystem {
     this.enemyBaseHp = BASES.ENEMY_BASTION_HP;
     this.enemyBaseMaxHp = BASES.ENEMY_BASTION_HP;
     this.supplies = ECONOMY.STARTING_SUPPLIES;
+    this.morale = MORALE.START;
     this.waveSys = new WaveSystem(this);
   }
 
@@ -77,11 +79,11 @@ export class BattleSystem {
     return !!def && this.supplies >= def.cost;
   }
 
-  spawnAlly(unitId: string): Combatant | null {
+  spawnAlly(unitId: string, customLane?: number): Combatant | null {
     const def = UNIT_INDEX[unitId];
     if (!def || this.supplies < def.cost) return null;
     this.supplies -= def.cost;
-    return this.addCombatant(def.id, 'ally', FIELD.SPAWN_ALLY_X, {
+    const c = this.addCombatant(def.id, 'ally', FIELD.SPAWN_ALLY_X, {
       maxHp: def.stats.maxHp,
       damage: def.stats.damage,
       attackInterval: def.stats.attackInterval,
@@ -95,7 +97,25 @@ export class BattleSystem {
       healPower: (def.stats as any).healPower,
       healRadius: (def.stats as any).healRadius,
       maxTargets: (def.stats as any).maxTargets,
-    });
+    }, customLane);
+
+    // Habilidad barricada del Engineer
+    if (c && c.traits.includes('build-barricade')) {
+      this.addCombatant('barricade', 'ally', FIELD.SPAWN_ALLY_X + 50, {
+        maxHp: 180, // Vida de la barricada
+        damage: 0,
+        attackInterval: 999999,
+        range: 0,
+        moveSpeed: 0,
+        armor: 2,
+        color: 0x8a6f3c,
+        label: 'B',
+        tags: ['structure', 'mechanical'],
+        traits: [],
+      }, c.lane);
+    }
+
+    return c;
   }
 
   spawnEnemy(enemyId: string): Combatant | null {
@@ -120,8 +140,9 @@ export class BattleSystem {
     faction: Faction,
     x: number,
     s: Omit<Combatant, 'uid' | 'defId' | 'faction' | 'x' | 'lane' | 'hp' | 'attackCooldown' | 'alive'>,
+    customLane?: number,
   ): Combatant {
-    const lane = this.leastBusyLane(faction);
+    const lane = customLane !== undefined ? customLane : this.leastBusyLane(faction);
     const c: Combatant = {
       uid: this.nextUid++,
       defId,
@@ -326,6 +347,18 @@ export class BattleSystem {
       const bounty = def?.bounty ?? 0;
       this.supplies += bounty;
       this.pendingEvents.push({ type: 'bounty', amount: bounty, defId: c.defId });
+      // Aumento de moral por muerte enemiga
+      const isElite = c.tags.includes('elite') || c.tags.includes('officer');
+      const moraleGain = isElite ? MORALE.PER_ELITE_KILL : MORALE.PER_KILL;
+      this.morale = Math.min(MORALE.MAX, this.morale + moraleGain);
+    } else if (c.faction === 'ally') {
+      // Disminución de moral por muerte aliada (las barricadas no cuentan)
+      if (c.defId !== 'barricade') {
+        const def = UNIT_INDEX[c.defId];
+        const cost = def?.cost ?? 0;
+        const loss = MORALE.UNIT_DEATH_BASE + Math.floor(cost / 25);
+        this.morale = Math.max(0, this.morale - loss);
+      }
     }
   }
 
@@ -338,12 +371,40 @@ export class BattleSystem {
       this.allyBaseHp -= c.damage;
       this.pendingEvents.push({ type: 'base-hit', faction: 'ally', amount: c.damage });
       if (this.allyBaseHp <= 0) this.allyBaseHp = 0;
+      // Disminución de moral por golpe a la base
+      const loss = (c.damage / 10) * MORALE.BASE_HIT_PER_10_DMG;
+      this.morale = Math.max(0, this.morale - loss);
     }
   }
 
   private checkOutcome(): void {
     if (this.enemyBaseHp <= 0) this.outcome = 'won';
-    else if (this.allyBaseHp <= 0) this.outcome = 'lost';
+    else if (this.allyBaseHp <= 0 || this.morale <= 0) this.outcome = 'lost';
+  }
+
+  castAirstrike(x: number): void {
+    for (const c of this.combatants) {
+      if (c.alive && c.faction === 'enemy') {
+        const dist = Math.abs(c.x - x);
+        if (dist <= 140) {
+          c.hp -= 80;
+          if (c.hp <= 0) this.kill(c, 'ally');
+        }
+      }
+    }
+    this.pendingEvents.push({ type: 'base-hit', faction: 'enemy', amount: 0 }); // Shake
+  }
+
+  castMedkit(x: number): void {
+    for (const c of this.combatants) {
+      if (c.alive && c.faction === 'ally' && c.defId !== 'barricade') {
+        const dist = Math.abs(c.x - x);
+        if (dist <= 120) {
+          c.hp = Math.min(c.maxHp, c.hp + 40);
+          this.pendingEvents.push({ type: 'heal', faction: 'ally', amount: 40 });
+        }
+      }
+    }
   }
 
   get allyCount(): number {
