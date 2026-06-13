@@ -15,8 +15,11 @@ import { BattleUI } from '../ui/BattleUI';
 
 // ── Layout constants ──────────────────────────────────────
 
-/** Unidades desplegables en MVP 0.2 */
-export const DEPLOYABLE = ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower'] as const;
+/** Unidades desplegables (las 12 unidades argentinas). */
+export const DEPLOYABLE = [
+  'rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower',
+  'bombero', 'cientifica', 'veterano', 'gaucho', 'colectivero', 'electricista',
+] as const;
 
 export class BattleScene extends Phaser.Scene {
   private sim!: BattleSystem;
@@ -353,15 +356,16 @@ export class BattleScene extends Phaser.Scene {
 
   /** Dev-only: despliega un escuadrón inicial repartido en carriles para capturas. */
   private devDemoDeploy(): void {
-    this.sim.supplies = 400; // presupuesto de demo
+    this.sim.supplies = 800; // presupuesto de demo
     const plan: Array<[string, number]> = [
-      ['rifleman', 0],
+      ['gaucho', 0],
       ['heavy-gunner', 1],
-      ['medic', 2],
+      ['veterano', 2],
       ['sniper', 3],
       ['flamethrower', 1],
-      ['rifleman', 2],
-      ['engineer', 0],
+      ['bombero', 2],
+      ['cientifica', 3],
+      ['colectivero', 0],
     ];
     for (const [unitId, lane] of plan) {
       this.cooldowns.set(unitId, 0);

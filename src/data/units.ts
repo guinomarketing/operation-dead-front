@@ -124,6 +124,90 @@ export const UNITS: UnitDef[] = [
     placeholder: { color: 0xc4622d, label: 'P' },
     phrase: "Aplicales fuego que se nos hace tarde."
   },
+  {
+    id: 'bombero',
+    name: 'Bombero Voluntario',
+    role: 'support',
+    description: 'Manguera a presión: frena hordas y aguanta la primera línea.',
+    cost: 65,
+    deployCooldown: 11000,
+    stats: { maxHp: 120, damage: 5, attackInterval: 280, range: 95, moveSpeed: 22, armor: 1 },
+    traits: [
+      { id: 'suppress', name: 'Chorro a Presión', description: 'Los enemigos golpeados se ralentizan 15%.', value: 0.15 },
+    ],
+    tags: ['infantry', 'organic', 'support'],
+    placeholder: { color: 0xb5402a, label: 'B' },
+    phrase: "¡Despejen, que mojo todo!"
+  },
+  {
+    id: 'cientifica',
+    name: 'Científica del CONICET',
+    role: 'precision',
+    description: 'Analiza y castiga mutaciones. Prioriza oficiales, ocultistas y bestias.',
+    cost: 80,
+    deployCooldown: 13000,
+    stats: { maxHp: 50, damage: 20, attackInterval: 1600, range: 210, moveSpeed: 24, armor: 0 },
+    traits: [
+      { id: 'priority-elite', name: 'Análisis de Campo', description: 'Apunta primero a elites y minibosses.' },
+    ],
+    tags: ['infantry', 'organic', 'specialist'],
+    placeholder: { color: 0x8aa0b0, label: 'Ci' },
+    phrase: "Papers bajo fuego, literal."
+  },
+  {
+    id: 'veterano',
+    name: 'Veterano',
+    role: 'assault',
+    description: 'Curtido y duro. Aguanta el frente y pega parejo.',
+    cost: 120,
+    deployCooldown: 16000,
+    stats: { maxHp: 185, damage: 14, attackInterval: 700, range: 130, moveSpeed: 26, armor: 2 },
+    traits: [],
+    tags: ['infantry', 'organic'],
+    placeholder: { color: 0x6b6048, label: 'V' },
+    phrase: "Esto ya lo viví, pibe. Aguante."
+  },
+  {
+    id: 'gaucho',
+    name: 'Gaucho',
+    role: 'assault',
+    description: 'Carga cuerpo a cuerpo con facón. Rápido y letal de cerca.',
+    cost: 50,
+    deployCooldown: 9000,
+    stats: { maxHp: 115, damage: 24, attackInterval: 750, range: 42, moveSpeed: 46, armor: 1 },
+    traits: [],
+    tags: ['infantry', 'organic', 'melee'],
+    placeholder: { color: 0x7a5a34, label: 'Ga' },
+    phrase: "Vení, que te bolaceo."
+  },
+  {
+    id: 'colectivero',
+    name: 'Colectivero',
+    role: 'assault',
+    description: 'Empuje imparable. Rápido, robusto y siempre llega a horario.',
+    cost: 90,
+    deployCooldown: 14000,
+    stats: { maxHp: 160, damage: 11, attackInterval: 600, range: 55, moveSpeed: 40, armor: 1 },
+    traits: [],
+    tags: ['infantry', 'organic'],
+    placeholder: { color: 0x3f5a6b, label: 'Co' },
+    phrase: "Última parada: el búnker."
+  },
+  {
+    id: 'electricista',
+    name: 'Electricista',
+    role: 'suppression',
+    description: 'Descargas que frenan en cadena. Control de masas barato.',
+    cost: 75,
+    deployCooldown: 12000,
+    stats: { maxHp: 60, damage: 9, attackInterval: 500, range: 130, moveSpeed: 26, armor: 0 },
+    traits: [
+      { id: 'suppress', name: 'Descarga', description: 'Los enemigos golpeados se ralentizan 15%.', value: 0.15 },
+    ],
+    tags: ['infantry', 'organic', 'specialist'],
+    placeholder: { color: 0x4a6f8a, label: 'El' },
+    phrase: "Cable pelado, problema resuelto."
+  },
 ];
 
 /** Índice por id para lookups O(1). */

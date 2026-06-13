@@ -134,6 +134,9 @@ export class SpriteFactory {
       });
     }
 
+    // ── Soft contact shadow (radial) ──
+    if (!scene.textures.exists('soft-shadow')) SpriteFactory.makeSoftShadow(scene, 'soft-shadow');
+
     // ── Particle textures ──
     if (!scene.textures.exists('particle-circle')) SpriteFactory.makeParticleTexture(scene, 'particle-circle', COLORS.textWhite);
     if (!scene.textures.exists('particle-ember')) SpriteFactory.makeParticleTexture(scene, 'particle-ember', COLORS.ember);
@@ -527,6 +530,27 @@ export class SpriteFactory {
   // ═══════════════════════════════════════════════════════════
   //  PARTICLE TEXTURES
   // ═══════════════════════════════════════════════════════════
+
+  /** Sombra de contacto suave (gradiente radial) para asentar a las unidades en el piso. */
+  private static makeSoftShadow(scene: Phaser.Scene, key: string): void {
+    const w = 128, h = 64;
+    const canvas = scene.textures.createCanvas(key, w, h);
+    if (!canvas) return;
+    const ctx = canvas.getContext();
+    const grad = ctx.createRadialGradient(w / 2, h / 2, 2, w / 2, h / 2, w / 2);
+    grad.addColorStop(0, 'rgba(0,0,0,0.55)');
+    grad.addColorStop(0.5, 'rgba(0,0,0,0.30)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.save();
+    ctx.translate(w / 2, h / 2);
+    ctx.scale(1, 0.5); // achatar a elipse
+    ctx.beginPath();
+    ctx.arc(0, 0, w / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    canvas.refresh();
+  }
 
   private static makeParticleTexture(scene: Phaser.Scene, key: string, color: number): void {
     const canvas = scene.textures.createCanvas(key, PARTICLE_SIZE, PARTICLE_SIZE);

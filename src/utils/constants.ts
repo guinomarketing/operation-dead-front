@@ -40,8 +40,8 @@ export const LAYOUT = {
 export const FIELD = {
   ALLY_BASE_X: 64, // centro de la base aliada (izquierda)
   ENEMY_BASE_X: 896, // centro del bastión enemigo (derecha)
-  SPAWN_ALLY_X: 140, // las tropas aparecen pasando la trinchera
-  SPAWN_ENEMY_X: 820, // los revenants salen del búnker
+  SPAWN_ALLY_X: 188, // las tropas aparecen pasando la trinchera (despejado del arte)
+  SPAWN_ENEMY_X: 812, // los revenants salen del búnker
   // 4 carriles sobre la franja de suelo plano del fondo (battlefield.jpg).
   // Centro vertical (pies de la unidad) de cada carril, de atrás (arriba) a adelante (abajo).
   LANES_Y: [256, 308, 360, 410] as const,

@@ -166,16 +166,23 @@ export class BattleUI {
     bottomBar.style.left = '0';
     bottomBar.style.right = '0';
     bottomBar.style.display = 'flex';
-    bottomBar.style.justifyContent = 'space-between';
+    bottomBar.style.justifyContent = 'flex-start';
     bottomBar.style.alignItems = 'flex-end';
-    bottomBar.style.padding = '0 14px';
+    bottomBar.style.gap = '10px';
+    bottomBar.style.padding = '0 12px';
     bottomBar.style.boxSizing = 'border-box';
     bottomBar.style.pointerEvents = 'none';
 
-    // ── Cartas de Unidades (izquierda) ──
+    // ── Cartas de Unidades (izquierda, scroll horizontal) ──
     const deployRow = document.createElement('div');
     deployRow.style.display = 'flex';
     deployRow.style.gap = '6px';
+    deployRow.style.flex = '1 1 auto';
+    deployRow.style.minWidth = '0';
+    deployRow.style.overflowX = 'auto';
+    deployRow.style.overflowY = 'hidden';
+    deployRow.style.paddingBottom = '4px';
+    (deployRow.style as any).scrollbarWidth = 'thin';
     deployRow.style.pointerEvents = 'auto';
 
     for (const unitId of DEPLOYABLE) {
@@ -185,6 +192,7 @@ export class BattleUI {
       card.className = 'glass-panel unit-card';
       card.style.width = '80px';
       card.style.height = '104px';
+      card.style.flexShrink = '0';
       card.style.position = 'relative';
       card.style.cursor = 'pointer';
       card.style.transition = 'transform 0.1s, border-color 0.1s, box-shadow 0.1s';
@@ -271,6 +279,7 @@ export class BattleUI {
     abilitiesRow.style.display = 'flex';
     abilitiesRow.style.gap = '10px';
     abilitiesRow.style.alignItems = 'flex-end';
+    abilitiesRow.style.flexShrink = '0';
     abilitiesRow.style.pointerEvents = 'auto';
 
     const abilityDefs = [

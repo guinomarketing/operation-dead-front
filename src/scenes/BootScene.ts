@@ -16,11 +16,17 @@ export class BootScene extends Phaser.Scene {
 
     // ── Personajes ilustrados (Magnific, PNG transparente recortado) ──
     // Unidades argentinas (key = unit-<defId>)
-    const units = ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower'];
+    const units = [
+      'rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower',
+      'bombero', 'cientifica', 'veterano', 'gaucho', 'colectivero', 'electricista',
+    ];
     for (const u of units) this.load.image(`unit-${u}`, `assets/sprites/unit-${u}.png`);
 
     // Enemigos + jefe (key = enemy-<defId>)
-    const enemies = ['revenant-grunt', 'runner-corpse', 'shielded-revenant', 'exploder', 'dead-officer', 'general-eisenfaust'];
+    const enemies = [
+      'revenant-grunt', 'runner-corpse', 'shielded-revenant', 'exploder', 'dead-officer',
+      'occultist', 'panzer-corpse', 'rot-hound', 'toxic-carrier', 'general-eisenfaust',
+    ];
     for (const e of enemies) this.load.image(`enemy-${e}`, `assets/sprites/enemy-${e}.png`);
   }
 

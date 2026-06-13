@@ -5,34 +5,42 @@
  */
 import Phaser from 'phaser';
 import { FIELD } from '../utils/constants';
-import { COLORS } from '../ui/colors';
+import { COLORS, lerpColor } from '../ui/colors';
 import { SpriteFactory } from './SpriteFactory';
 import type { Combatant } from '../systems/BattleSystem';
 
+/** Color de niebla para perspectiva atmosférica (carriles del fondo). */
+const FOG_TINT = 0x9fb0ba;
+
 const REAL_ART = new Set([
   'unit-rifleman', 'unit-heavy-gunner', 'unit-medic', 'unit-engineer', 'unit-sniper', 'unit-flamethrower',
+  'unit-bombero', 'unit-cientifica', 'unit-veterano', 'unit-gaucho', 'unit-colectivero', 'unit-electricista',
   'enemy-revenant-grunt', 'enemy-runner-corpse', 'enemy-shielded-revenant', 'enemy-exploder',
-  'enemy-dead-officer', 'enemy-general-eisenfaust',
+  'enemy-dead-officer', 'enemy-occultist', 'enemy-panzer-corpse', 'enemy-rot-hound', 'enemy-toxic-carrier',
+  'enemy-general-eisenfaust',
 ]);
 
 /** Altura base de display (px) por tipo, antes de la escala de carril. */
-function baseHeightFor(defId: string, faction: 'ally' | 'enemy'): number {
+function baseHeightFor(defId: string): number {
   switch (defId) {
     case 'general-eisenfaust': return 188; // jefe
-    case 'panzer-corpse': return 104;
-    case 'shielded-revenant': return 92;
-    case 'dead-officer': return 90;
+    case 'panzer-corpse': return 132; // mutante blindado (mini-boss)
+    case 'shielded-revenant': return 96;
+    case 'dead-officer': return 92;
+    case 'occultist': return 90;
+    case 'toxic-carrier': return 88;
     case 'exploder': return 74;
-    case 'rot-hound': return 52;
+    case 'rot-hound': return 50; // perro (cuadrúpedo, bajo)
+    case 'veterano': return 88;
     case 'barricade': return 66;
-    default: return faction === 'ally' ? 80 : 80;
+    default: return 80;
   }
 }
 
 export class UnitRenderer {
   private scene: Phaser.Scene;
   private sprite: Phaser.GameObjects.Image;
-  private shadow: Phaser.GameObjects.Ellipse;
+  private shadow: Phaser.GameObjects.Image;
   private container: Phaser.GameObjects.Container;
   private hpBarBg: Phaser.GameObjects.Rectangle;
   private hpBarFill: Phaser.GameObjects.Rectangle;
@@ -71,9 +79,13 @@ export class UnitRenderer {
     const isReal = REAL_ART.has(textureKey);
     const hasTexture = scene.textures.exists(textureKey);
 
-    this.dispH = baseHeightFor(c.defId, c.faction) * scale;
+    this.dispH = baseHeightFor(c.defId) * scale;
 
-    this.shadow = scene.add.ellipse(c.x, groundY, this.dispH * 0.5, this.dispH * 0.13, 0x000000, 0.3);
+    // Tinte de base (color del soldado o blanco) mezclado con niebla según profundidad.
+    const baseTint = (c.faction === 'ally' && c.colorTint && c.colorTint !== 0xffffff) ? c.colorTint
+      : (hasTexture ? 0xffffff : c.color);
+    const fogAmount = Phaser.Math.Clamp(0.30 - scale * 0.24, 0, 0.30); // atrás ~0.10, adelante ~0.05
+    this.colorTint = lerpColor(baseTint, FOG_TINT, fogAmount);
 
     if (hasTexture) {
       this.sprite = scene.add.image(c.x, groundY, textureKey);
@@ -81,22 +93,28 @@ export class UnitRenderer {
       const aspect = src && src.height ? src.width / src.height : 0.6;
       this.dispW = this.dispH * aspect;
       this.sprite.setDisplaySize(this.dispW, this.dispH);
-      if (c.faction === 'ally' && c.colorTint && c.colorTint !== 0xffffff) {
-        this.colorTint = c.colorTint;
-        this.sprite.setTint(this.colorTint);
-      }
     } else {
       this.sprite = scene.add.image(c.x, groundY, '__DEFAULT');
       this.dispW = this.dispH * 0.55;
       this.sprite.setDisplaySize(this.dispW, this.dispH);
-      this.colorTint = (c.faction === 'ally' && c.colorTint && c.colorTint !== 0xffffff) ? c.colorTint : c.color;
-      this.sprite.setTint(this.colorTint);
     }
+    this.sprite.setTint(this.colorTint);
     this.sprite.setOrigin(0.5, 1);
     if (c.faction === 'enemy' && !isReal) this.sprite.setFlipX(true);
 
     this.baseScaleX = this.sprite.scaleX;
     this.baseScaleY = this.sprite.scaleY;
+
+    // Sombra de contacto suave en el piso (asienta a la unidad).
+    if (scene.textures.exists('soft-shadow')) {
+      this.shadow = scene.add.image(c.x, groundY, 'soft-shadow');
+      this.shadow.setDisplaySize(this.dispW * 1.2, this.dispH * 0.32);
+      this.shadow.setAlpha(0.5);
+    } else {
+      this.shadow = scene.add.image(c.x, groundY, '__DEFAULT');
+      this.shadow.setDisplaySize(this.dispW * 0.6, this.dispH * 0.12);
+      this.shadow.setTint(0x000000).setAlpha(0.3);
+    }
 
     // Barra de vida + nombre
     this.barW = Math.min(60, Math.max(32, this.dispW * 0.7));

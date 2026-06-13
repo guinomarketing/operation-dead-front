@@ -142,6 +142,19 @@ export const ENEMIES: EnemyDef[] = [
     tags: ['undead', 'beast'],
     placeholder: { color: 0x6e4b2a, label: 'P' },
   },
+  {
+    id: 'toxic-carrier',
+    name: 'Unidad Tóxica',
+    tier: 'special',
+    behaviors: ['advance'],
+    description: 'Carga bidones de suero que largan gas verde a su paso.',
+    stats: { maxHp: 80, damage: 7, attackInterval: 1100, range: 22, moveSpeed: 18, armor: 1 },
+    bounty: 10,
+    moraleOnDeath: 2,
+    moraleOnBreach: 5,
+    tags: ['undead', 'toxic'],
+    placeholder: { color: 0x5ee03a, label: 'T' },
+  },
 ];
 
 export const ENEMY_INDEX: Record<string, EnemyDef> = Object.fromEntries(

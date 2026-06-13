@@ -33,10 +33,17 @@ export class RunSystem {
       RunSystem.generateRandomSoldier('rifleman'),
       RunSystem.generateRandomSoldier('rifleman'),
       RunSystem.generateRandomSoldier('heavy-gunner'),
+      RunSystem.generateRandomSoldier('heavy-gunner'),
       RunSystem.generateRandomSoldier('medic'),
       RunSystem.generateRandomSoldier('engineer'),
       RunSystem.generateRandomSoldier('sniper'),
-      RunSystem.generateRandomSoldier('flamethrower')
+      RunSystem.generateRandomSoldier('flamethrower'),
+      RunSystem.generateRandomSoldier('bombero'),
+      RunSystem.generateRandomSoldier('cientifica'),
+      RunSystem.generateRandomSoldier('veterano'),
+      RunSystem.generateRandomSoldier('gaucho'),
+      RunSystem.generateRandomSoldier('colectivero'),
+      RunSystem.generateRandomSoldier('electricista'),
     ];
 
     return {
@@ -49,7 +56,7 @@ export class RunSystem {
       baseMaxHp: BASES.ALLY_HP,
       morale: MORALE.START,
       suppliesBonusNextBattle: 0,
-      unlockedUnitIds: ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower'],
+      unlockedUnitIds: ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower', 'bombero', 'cientifica', 'veterano', 'gaucho', 'colectivero', 'electricista'],
       equippedAbilityIds: ['airstrike', 'medkit'],
       upgradeIds: [],
       relicIds: [],

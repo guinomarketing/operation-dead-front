@@ -1,5 +1,23 @@
 # Changelog — Operación Cóndor Muerto
 
+## [grounding + roster completo] — 2026-06-13 · rama `feature/landscape-gameplay-refactor`
+
+Credibilidad de piso + más contenido (todo Magnific).
+
+- **Fix "caminan en el aire" / personajes pegoteados**: nuevo **campo de batalla plano**
+  (Magnific) con suelo amplio; carriles reubicados sobre esa franja; **sombra de contacto
+  suave** (gradiente radial) bajo cada unidad; **perspectiva atmosférica** (los carriles
+  del fondo se ven más chicos y con tinte de niebla); spawn aliado corrido para no
+  superponerse con la trinchera.
+- **+10 personajes Magnific** (recortados): 4 enemigos nuevos integrados a oleadas
+  (**perro zombi, ocultista, mutante blindado, unidad tóxica**) y **6 unidades nuevas
+  jugables** (**Bombero, Científica del CONICET, Veterano, Gaucho, Colectivero,
+  Electricista**) con stats, roles y frases.
+- **12 unidades desplegables** con **cartas en tira con scroll horizontal** (mobile) y
+  habilidades fijas a la derecha; roster inicial y `unlockedUnitIds` ampliados.
+- Animación procedural ya activa (marcha/idle/ataque/golpe) sobre personajes asentados.
+- `tsc` ✅ · `vite build` ✅ · sin errores · verificado en pantalla.
+
 ## [personajes ilustrados] — 2026-06-13 · rama `feature/landscape-gameplay-refactor`
 
 Reemplazo total de los sprites placeholder (rectángulos/procedurales) por **arte
