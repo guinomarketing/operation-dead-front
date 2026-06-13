@@ -8,13 +8,15 @@ Prioridades: **P0** = bloquea el look actual · **P1** = gran salto de calidad �
 |---|---|---|---|
 | Fondo de batalla 16:9 | `public/assets/backgrounds/battlefield.jpg` | BattleScene | ✅ Magnific, integrado |
 | Key art menú 16:9 | `public/assets/backgrounds/keyart-main.jpg` | MainMenu | ✅ Magnific, integrado |
+| 6 unidades base | `public/assets/sprites/unit-*.png` | UnitRenderer + cartas | ✅ Magnific (recortado), integrado |
+| 5 enemigos | `public/assets/sprites/enemy-{revenant-grunt,runner-corpse,shielded-revenant,exploder,dead-officer}.png` | UnitRenderer | ✅ Magnific (recortado), integrado |
+| Jefe El Coronel Reanimado | `public/assets/sprites/enemy-general-eisenfaust.png` | boss | ✅ Magnific (recortado), integrado |
 
 ## Faltantes priorizados
 | Prioridad | Asset | Uso | Estado |
 |---|---|---|---|
-| **P1** | Sprites de 6 unidades base (Conscripto, Gendarme, Médica, Mecánico, Cazador, Parrillero) | UnitRenderer + cartas | ⏳ procedural placeholder; prompts listos |
-| **P1** | Sprites de enemigos (grunt, runner, escudado, explosivo, oficial, perro) | UnitRenderer | ⏳ procedural placeholder; prompts listos |
-| **P1** | Boss "Coronel Reanimado" | boss splash + combate | ⏳ prompt listo |
+| **P1** | Sprites enemigos restantes (perro zombi, ocultista, mutante blindado, tóxico) | UnitRenderer | ⏳ procedural placeholder; prompts listos |
+| **P1** | 6 unidades de desbloqueo (Bombero, Científica, Veterano, Gaucho, Colectivero, Electricista) | UnitRenderer + cartas | ⏳ prompts listos |
 | **P2** | Fondos alternos por sala (laboratorio, ruta/niebla, pueblo) | variedad de rooms | ⏳ prompts listos |
 | **P2** | Marcos/íconos de UI (card-frame, iconos de recursos/habilidades) | HUD | ⏳ usa emojis/CSS |
 | **P2** | Sprites de 6 unidades extra (Bombero, Científica, Veterano, Gaucho, Colectivero, Electricista) | desbloqueos | ⏳ prompts listos |

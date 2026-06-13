@@ -182,53 +182,68 @@ export class BattleUI {
       const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
 
       const card = document.createElement('div');
-      card.className = 'glass-panel';
-      card.style.width = '74px';
-      card.style.height = '92px';
+      card.className = 'glass-panel unit-card';
+      card.style.width = '80px';
+      card.style.height = '104px';
       card.style.position = 'relative';
-      card.style.display = 'flex';
-      card.style.flexDirection = 'column';
-      card.style.alignItems = 'center';
-      card.style.justifyContent = 'flex-end';
-      card.style.paddingBottom = '5px';
       card.style.cursor = 'pointer';
       card.style.transition = 'transform 0.1s, border-color 0.1s, box-shadow 0.1s';
       card.style.overflow = 'hidden';
+      card.style.background = 'linear-gradient(180deg, #2a3320 0%, #161c12 100%)';
 
       card.onmousedown = () => card.style.transform = 'scale(0.95)';
       card.onmouseup = () => { card.style.transform = 'scale(1)'; this.onSelectCard(unitId); };
       card.onmouseleave = () => card.style.transform = 'scale(1)';
 
+      // Retrato (arte ilustrado, llena la carta)
       const icon = document.createElement('img');
       const textureKey = `unit-${unitId}`;
       if (this.scene.textures.exists(textureKey)) {
-        try {
-          icon.src = this.scene.textures.getBase64(textureKey);
-        } catch (e) {
-          icon.src = `/assets/sprites/unit-${unitId}.png`;
-        }
+        try { icon.src = this.scene.textures.getBase64(textureKey); }
+        catch (e) { icon.src = `/assets/sprites/unit-${unitId}.png`; }
       } else {
         icon.src = `/assets/sprites/unit-${unitId}.png`;
       }
-      icon.style.width = '44px';
-      icon.style.height = '44px';
-      icon.style.objectFit = 'contain';
       icon.style.position = 'absolute';
-      icon.style.top = '5px';
-      icon.style.imageRendering = 'pixelated';
+      icon.style.top = '2px';
+      icon.style.left = '50%';
+      icon.style.transform = 'translateX(-50%)';
+      icon.style.height = '88px';
+      icon.style.width = 'auto';
+      icon.style.objectFit = 'contain';
+      icon.style.filter = 'drop-shadow(0 2px 2px rgba(0,0,0,0.6))';
+      icon.draggable = false;
 
-      const name = document.createElement('div');
-      name.innerText = def.name;
-      name.style.fontSize = '10px';
-      name.style.fontWeight = 'bold';
-      name.style.marginTop = 'auto';
-      name.style.textAlign = 'center';
-
+      // Badge de coste (arriba a la izquierda)
       const cost = document.createElement('div');
-      cost.innerText = `⬢ ${def.cost}`;
-      cost.style.fontSize = '11px';
+      cost.innerHTML = `<span style="font-size:9px;">⬢</span> ${def.cost}`;
+      cost.style.position = 'absolute';
+      cost.style.top = '2px';
+      cost.style.left = '2px';
+      cost.style.padding = '1px 5px';
+      cost.style.fontSize = '12px';
       cost.style.color = 'var(--primary)';
       cost.style.fontFamily = 'var(--font-title)';
+      cost.style.background = 'rgba(0,0,0,0.65)';
+      cost.style.borderRadius = '3px';
+      cost.style.zIndex = '3';
+
+      // Barra de nombre (abajo)
+      const name = document.createElement('div');
+      name.innerText = def.name;
+      name.style.position = 'absolute';
+      name.style.bottom = '0';
+      name.style.left = '0';
+      name.style.width = '100%';
+      name.style.boxSizing = 'border-box';
+      name.style.padding = '3px 2px';
+      name.style.fontSize = '9px';
+      name.style.fontWeight = 'bold';
+      name.style.textAlign = 'center';
+      name.style.color = '#fff';
+      name.style.background = 'linear-gradient(0deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.0) 100%)';
+      name.style.zIndex = '3';
+      name.style.lineHeight = '1.1';
 
       const cdOverlay = document.createElement('div');
       cdOverlay.style.position = 'absolute';
@@ -240,11 +255,12 @@ export class BattleUI {
       cdOverlay.style.transformOrigin = 'bottom';
       cdOverlay.style.transform = 'scaleY(0)';
       cdOverlay.style.pointerEvents = 'none';
+      cdOverlay.style.zIndex = '4';
 
-      card.appendChild(cdOverlay);
       card.appendChild(icon);
-      card.appendChild(name);
+      card.appendChild(cdOverlay);
       card.appendChild(cost);
+      card.appendChild(name);
 
       this.cards[unitId] = { el: card, costEl: cost, cdOverlay, nameEl: name };
       deployRow.appendChild(card);

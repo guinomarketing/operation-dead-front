@@ -1,5 +1,27 @@
 # Changelog — Operación Cóndor Muerto
 
+## [personajes ilustrados] — 2026-06-13 · rama `feature/landscape-gameplay-refactor`
+
+Reemplazo total de los sprites placeholder (rectángulos/procedurales) por **arte
+ilustrado de personajes generado con Magnific** — el mayor salto visual.
+
+- **12 personajes nuevos** (Nano Banana Pro + recorte AI de fondo, PNG transparente
+  recortado al alpha y reescalado): 6 unidades (Conscripto, Gendarme, Médica, Mecánico,
+  Cazador Patagónico, Parrillero), 5 enemigos (revenant común, runner, escudado, explosivo,
+  oficial reanimado) y el **jefe El Coronel Reanimado**. En `public/assets/sprites/`.
+- **`UnitRenderer` reescrito**: origen en los pies sobre la línea del carril, tamaño por
+  tipo (jefe ~210px), aspecto real del arte, barra de vida + nombre sobre la cabeza,
+  sin volteo para el arte real (ya mira en la dirección correcta), animaciones de
+  aparición/ataque/muerte. Procedural sólo como fallback (rot-hound, occultist, etc.).
+- **`BootScene`**: carga los 12 PNG bajo sus keys finales (`unit-*`, `enemy-*`); se eliminó
+  el flood-fill de transparencia (ya no hace falta) y los búnkers placeholder.
+- **Cartas de unidad rediseñadas**: retrato ilustrado que llena la carta + badge de coste +
+  barra de nombre (estilo brandbook), en vez del ícono diminuto.
+- Indicadores de despliegue suavizados (banda de carril sutil en vez de bloques verdes);
+  destello de disparo a la altura del arma; intro del jefe renombrada "El Coronel Reanimado".
+- `tsc` ✅ · `vite build` ✅ · sin errores de consola · verificado en pantalla (personajes
+  reales en el campo + cartas con retrato).
+
 ## [landscape art] — 2026-06-13 · rama `feature/landscape-gameplay-refactor`
 
 ### Arte (Magnific)

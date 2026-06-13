@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { SpriteFactory } from '../rendering/SpriteFactory';
 import { RunSystem } from '../systems/RunSystem';
 
 /**
@@ -12,22 +11,23 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Cargar fondo de batalla (16:9, generado con Magnific)
+    // Fondo de batalla (16:9, generado con Magnific)
     this.load.image('battlefield', 'assets/backgrounds/battlefield.jpg');
 
-    // Cargar sprites crudos con fondo negro
-    this.load.image('raw-ally-bunker', 'assets/sprites/ally-bunker.png');
-    this.load.image('raw-enemy-bunker', 'assets/sprites/enemy-bunker.png');
-    this.load.image('raw-unit-rifleman', 'assets/sprites/unit-rifleman.png');
-    this.load.image('raw-enemy-revenant-grunt', 'assets/sprites/enemy-revenant-grunt.png');
+    // ── Personajes ilustrados (Magnific, PNG transparente recortado) ──
+    // Unidades argentinas (key = unit-<defId>)
+    const units = ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower'];
+    for (const u of units) this.load.image(`unit-${u}`, `assets/sprites/unit-${u}.png`);
+
+    // Enemigos + jefe (key = enemy-<defId>)
+    const enemies = ['revenant-grunt', 'runner-corpse', 'shielded-revenant', 'exploder', 'dead-officer', 'general-eisenfaust'];
+    for (const e of enemies) this.load.image(`enemy-${e}`, `assets/sprites/enemy-${e}.png`);
   }
 
   create(): void {
-    // Procesar imágenes con fondo negro para hacerlas transparentes
-    SpriteFactory.processTransparentTexture(this, 'raw-ally-bunker', 'ally-bunker');
-    SpriteFactory.processTransparentTexture(this, 'raw-enemy-bunker', 'enemy-bunker');
-    SpriteFactory.processTransparentTexture(this, 'raw-unit-rifleman', 'unit-rifleman');
-    SpriteFactory.processTransparentTexture(this, 'raw-enemy-revenant-grunt', 'enemy-revenant-grunt');
+    // Los personajes ya vienen transparentes; las texturas no presentes
+    // (rot-hound, occultist, panzer-corpse, barricade, partículas) las genera
+    // SpriteFactory de forma procedural como fallback.
 
     // ── Dev jump (solo para pruebas): ?scene=battle | ?scene=boss | ?scene=map ──
     const jump = new URLSearchParams(window.location.search).get('scene');

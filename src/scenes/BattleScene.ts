@@ -107,7 +107,7 @@ export class BattleScene extends Phaser.Scene {
       this.time.delayedCall(800, () => {
         this.cameras.main.flash(400, 150, 0, 0);
         this.cameras.main.shake(400, 0.01);
-        const splash = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, 'CORONEL VON GRÜBER', {
+        const splash = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, 'EL CORONEL REANIMADO', {
           fontFamily: FONTS.title,
           fontSize: '32px',
           color: '#ef4444',
@@ -115,8 +115,8 @@ export class BattleScene extends Phaser.Scene {
           stroke: '#000000',
           strokeThickness: 5
         }).setOrigin(0.5).setDepth(880);
-        
-        const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, 'El Terror Blindado del Búnker', {
+
+        const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, 'El mando que la muerte no detuvo', {
           fontFamily: FONTS.body,
           fontSize: '16px',
           color: '#ffffff',
@@ -674,15 +674,21 @@ export class BattleScene extends Phaser.Scene {
     // Refrescar HUD
     this.refreshHud();
 
-    // Dibujar indicadores de carril si hay unidad seleccionada
+    // Indicadores de carril cuando hay una unidad seleccionada:
+    // banda translúcida a lo ancho (elegí carril) + marcador en la trinchera.
     this.deployIndicators.clear();
     if (this.selectedUnitId) {
-      const pulse = 0.4 + Math.sin(this.time.now * 0.015) * 0.15;
-      this.deployIndicators.fillStyle(0x7bbf4a, pulse);
+      const pulse = 0.10 + Math.sin(this.time.now * 0.006) * 0.04;
+      const fieldRight = FIELD.ENEMY_BASE_X - 60;
       for (const y of FIELD.LANES_Y) {
-        this.deployIndicators.fillRoundedRect(FIELD.SPAWN_ALLY_X - 30, y - 20, 60, 40, 6);
-        this.deployIndicators.lineStyle(2, 0x33aa22, pulse + 0.2);
-        this.deployIndicators.strokeRoundedRect(FIELD.SPAWN_ALLY_X - 30, y - 20, 60, 40, 6);
+        // banda sutil del carril
+        this.deployIndicators.fillStyle(0x7bbf4a, pulse);
+        this.deployIndicators.fillRect(FIELD.SPAWN_ALLY_X - 24, y - 18, fieldRight - (FIELD.SPAWN_ALLY_X - 24), 36);
+        // marcador de despliegue (trinchera)
+        this.deployIndicators.fillStyle(0x9be060, 0.22 + Math.sin(this.time.now * 0.012) * 0.10);
+        this.deployIndicators.fillRoundedRect(FIELD.SPAWN_ALLY_X - 26, y - 20, 52, 40, 8);
+        this.deployIndicators.lineStyle(2, 0x33aa22, 0.5);
+        this.deployIndicators.strokeRoundedRect(FIELD.SPAWN_ALLY_X - 26, y - 20, 52, 40, 8);
       }
     }
 
@@ -780,9 +786,9 @@ export class BattleScene extends Phaser.Scene {
         const r = this.renderers.get(c.uid);
         if (r) {
           r.playAttack();
-          // Muzzle flash for ranged units
+          // Muzzle flash for ranged units (a la altura del arma)
           if (c.range > 30) {
-            const y = FIELD.LANES_Y[c.lane];
+            const y = FIELD.LANES_Y[c.lane] - 34;
             this.spawnMuzzleFlash(c.x, y, c.faction === 'ally');
           }
         }
