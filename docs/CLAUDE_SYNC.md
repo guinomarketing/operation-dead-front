@@ -2,27 +2,15 @@
 
 This document is updated automatically to help Claude understand the current state, progress, and architectural decisions made by Antigravity in this project.
 
-## Current State: MVP 0.3 (The Roguelite Run Loop & Boss Fight) ✅
+## Current State: MVP 0.4 (XCOM-Style Squad Roster, Customization & Permadeath) ⚙️ (In Progress)
 
-We have successfully completed all core features of **MVP 0.3 (La Run)**:
-1. **Procedural Map & Navigation (`RunSystem.ts`, `MapScene.ts`)**:
-   - Seeds generation for a 9-row grid map connecting nodes dynamically (prevents isolated nodes, no elites in rows 1-2, final Boss on row 8).
-   - Core node types: `battle` (normal fights), `elite` (hard fights with 1.6x threat budget), `event` (narrative event resolution), `supply` (shop using Intel credentials), and `hq` (rest camp to restore +30 base HP or +20 morale).
-   - Semi-transparent HTML/CSS glassmorphic overlays for interactive events, shop requisitions, and camp briefing choices.
-2. **Persistent Run State (`BattleScene.ts`, `ResultScene.ts`)**:
-   - Global state tracks commander, base HP, morale (30-100), upgrades, relics, intel, and medals.
-   - HP and morale are persistent; taking damage in battle is saved to the registry and carried over to the map.
-   - Victory rewards choice of upgrades (which are added to `runState.upgradeIds`) and +1 Intel/Medal before returning to the map.
-3. **General Eisenfaust Boss Fight (`BattleSystem.ts`, `WaveSystem.ts`, `BattleScene.ts`)**:
-   - Skips normal waves. Spawns General Eisenfaust as a high-HP (1200) unit in the center lane.
-   - Enemy bastion health bar is linked to the Boss's health; killing him wins the match.
-   - Dynamic HP threshold phases:
-     - **Phase 1 (HP > 70%)**: Commands from rear, summons 3 Revenant Grunts every 8s.
-     - **Phase 2 (35% < HP <= 70%)**: Joins front, summons 3 grunts every 8s, command aura (+20% damage to nearby Reich units), and ground slam AoE (90px).
-     - **Phase 3 (HP <= 35%)**: Iron rage, summons 2 Runner Corpses every 5s, 30% speed boost (move speed 16), and ground slam AoE.
-   - **Epic Visuals**: Red intro text splash with shake, screenshake on summons, red flash and warning text on phase transition, and chained delayed airstrike explosions + blood/toxic cloud on death.
-4. **Elite Threat Multiplier (`WaveSystem.ts`)**:
-   - Elite battles increase threat spawn budget by a multiplier of `1.6x` for a harder challenge.
+We are currently implementing **MVP 0.4 (El Plantel y Permadeath)**:
+1. **Persistent Squad Roster**: A list of named, custom soldiers (`RosterSoldier`) stored in `RunState` and initialized with 8 starting recruits of different classes.
+2. **Individual Customization**: Nicknames can be edited in real-time, and color tints can be selected to change their in-battle sprite color.
+3. **Level & XP Progression**: Soldiers earn XP for surviving combat and scoring kills. They level up (ranks 1-5), improving their base HP (+15% per level) and Damage (+10% per level).
+4. **Permadeath**: If a soldier falls in battle, they are lost forever. If the roster reaches 0, the campaign fails.
+5. **Recruitment**: Added "Recruit Specialist" option at shops (using Intel) and camps (free reinforcement) to prevent roster depletion.
+6. **Deployment Limitation**: Soldiers are unique resources; once deployed in a battle, they cannot be deployed again in that same battle. Deploy cards show the remaining count of available units.
 
 ---
 
