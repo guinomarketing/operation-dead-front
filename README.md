@@ -1,27 +1,35 @@
-# Operation Dead Front
+# Operación Cóndor Muerto
 
-Roguelite táctico mobile (2D, vista lateral) de guerra alternativa contra una facción
-ficticia de muertos vivientes — **The Revenant Reich**. Inspirado mecánicamente en
-*Warfare 1917* (frente lateral, despliegue por recursos, presión de línea), con
-identidad propia y estética pulp bélica sobrenatural.
+Roguelite táctico mobile **horizontal (landscape 16:9)** ambientado en Argentina: una
+base nazi secreta liberó un virus zombi en la Patagonia y un grupo de argentinos
+improvisados sostiene la línea contra la horda revenant. Mezcla propia de *Warfare 1917*
+(frente lateral, moral, presión de línea), *Plants vs Zombies* (carriles, counterplay) y
+*Slay the Spire* (mapa de run, nodos, reliquias, eventos). Estética **cómic bélico oscuro
+pulp** con humor criollo.
 
 **Stack:** Phaser 3 · TypeScript · Vite · (Capacitor para empaquetar mobile, más adelante).
 
 ---
 
-## Estado: MVP 0.1 — jugable
+## Estado: landscape jugable + arte inicial
 
-Esta build ya se juega. Incluye el bucle de combate completo de una batalla:
+Build jugable de punta a punta en **horizontal 960×540 (16:9)**:
 
-- Escenas Boot → Menú → Batalla → Resultado, en formato vertical 540×960 (Scale.FIT).
-- Despliegue de **Rifleman** por coste (25 supplies) y cooldown (2 s).
-- Spawn automático de **Revenant Grunts** cada 3,5 s.
-- Combate automático: avance, rango, ataque por intervalos, daño con armadura, muerte.
-- Economía de supplies (+8/s, arranque 40) con recompensa (bounty) por matar.
-- Vida de HQ aliado (100) y bastión enemigo (250); daño al alcanzar la base.
-- Victoria (bastión a 0) / derrota (HQ a 0) con pantalla de resultado y reinicio.
+- Escenas Boot → Menú → Mapa de run → Batalla → Resultado.
+- **Combate por carriles** (4): base argentina a la izquierda, búnker enemigo a la
+  derecha; tropas avanzan →, revenants avanzan ←; combate automático.
+- Unidades argentinas (Conscripto, Gendarme, Médica, Mecánico, Cazador Patagónico,
+  Parrillero…) desplegables por coste + cooldown; habilidades de comandante (Ataque
+  Aéreo, Botiquín).
+- Economía de suministros, **moral**, HP de base/búnker, oleadas (WaveSystem) y **boss**.
+- **Run roguelite**: mapa de nodos horizontal, eventos, tienda, cuartel, recompensas,
+  upgrades y reliquias (data ya definida en `/src/data`).
+- **Arte**: fondo de batalla y key art del menú **16:9 generados con Magnific** (cómic
+  bélico). Las unidades/enemigos aún usan sprites procedurales (placeholder coherente);
+  reemplazo de personajes documentado en `docs/MAGNIFIC_PROMPTS.md`.
 
-Todo el arte es **placeholder vectorial** (rectángulos con color + etiqueta), por diseño.
+> HUD: arriba HP Base / Moral · Suministros · Bajas / HP Búnker; abajo cartas de unidad
+> (izquierda) y habilidades (derecha). Pensado para dedos en mobile landscape.
 
 ---
 
@@ -31,8 +39,13 @@ Requiere Node 18+.
 
 ```bash
 npm install
-npm run dev      # servidor de desarrollo (Vite) → abrí la URL que imprime
+npm run dev      # servidor de desarrollo (Vite) → http://localhost:5173
 ```
+
+**Atajos de desarrollo** (para QA, no afectan el flujo normal):
+
+- `http://localhost:5173/?scene=battle&demo=1` — combate con escuadrón ya desplegado.
+- `?scene=boss` — pelea de jefe · `?scene=map` — mapa de run directo.
 
 Para una build estática lista para servir / empaquetar:
 
@@ -46,10 +59,11 @@ subir a itch.io o envolver con Capacitor sin cambios.
 
 ### Cómo se juega
 
-Tocá la carta **RIFLEMAN** abajo para desplegar tropa cuando tengas supplies.
-Los riflemen avanzan solos y pelean. Acumulá presión para empujar hasta el bastión
-enemigo antes de que los grunts arrasen tu HQ. Si te quedás sin supplies, esperá:
-se regeneran solos y subís bounty por cada muerto.
+Elegí un nodo en el **mapa de run** (izquierda→derecha). En combate, tocá una **carta
+de unidad** (abajo a la izquierda) y luego un **carril** del campo para desplegarla
+cuando tengas suministros. Las unidades avanzan y pelean solas; usá las **habilidades**
+(abajo a la derecha) para inclinar la balanza. Empujá hasta el búnker enemigo antes de
+que la horda arrase tu base — y cuidá la **moral**: si llega a 0, perdés.
 
 ---
 
@@ -57,17 +71,20 @@ se regeneran solos y subís bounty por cada muerto.
 
 ```
 operation-dead-front/
-├─ index.html               # contenedor mobile portrait
+├─ index.html               # contenedor mobile landscape (#app-container 16:9)
+├─ public/assets/           # backgrounds (battlefield.jpg, keyart-main.jpg), sprites, ui, audio
 ├─ src/
-│  ├─ main.ts               # arranque Phaser (Scale.FIT 540×960)
-│  ├─ scenes/               # Boot · MainMenu · Battle · Result
-│  ├─ systems/              # BattleSystem (lógica de combate, sin Phaser)
+│  ├─ main.ts               # arranque Phaser (Scale.FIT 960×540 landscape)
+│  ├─ scenes/               # Boot · MainMenu · Map · Battle · Result
+│  ├─ systems/              # BattleSystem · WaveSystem · RunSystem (lógica, sin Phaser)
+│  ├─ rendering/            # SpriteFactory (texturas procedurales) · UnitRenderer
 │  ├─ data/                 # contenido declarativo (units, enemies, bosses, …)
 │  ├─ types/                # contratos TypeScript (sin Phaser)
-│  ├─ ui/                   # paleta y helpers de UI
-│  └─ utils/                # constants.ts (números base del juego)
-├─ docs/                    # GDD · ART_DIRECTION · TECH_ARCHITECTURE · ROADMAP · BACKLOG
-└─ prompts/                 # prompts de agentes por rol (ver docs/PROMPTS.md)
+│  ├─ ui/                   # BattleUI (HUD landscape) · paleta y helpers
+│  └─ utils/                # constants.ts (GAME_*, LAYOUT, FIELD — fuente única de layout)
+├─ docs/                    # LANDSCAPE_REFACTOR · UI_LANDSCAPE_GUIDE · MAGNIFIC_PROMPTS ·
+│                           #   asset_plan · changelog · next_steps · GDD · ROADMAP · BACKLOG …
+└─ prompts/                 # prompts de agentes por rol
 ```
 
 La data viene mucho más allá del MVP: 6 unidades, 8 enemigos, 3 bosses, 7 habilidades,
