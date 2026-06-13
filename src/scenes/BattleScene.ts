@@ -153,28 +153,23 @@ export class BattleScene extends Phaser.Scene {
     const cover = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
     bg.setScale(cover);
 
-    // Oscurecer ligeramente para que las unidades resalten (lectura PvZ)
-    const dim = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0a0d0a, 0.28);
+    // Oscurecer apenas la zona de combate para que las unidades resalten (lectura PvZ),
+    // sin tapar la ilustración del fondo.
+    const dim = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0a0d0a, 0.16);
     dim.setDepth(-95);
 
-    // Dibujar caminos visuales para los carriles
+    // Guías de carril MUY sutiles sobre el terreno ilustrado (claridad de carriles).
     const pathG = this.add.graphics();
     pathG.setDepth(-90);
     for (const y of FIELD.LANES_Y) {
-      // Sendero de tierra marrón
-      pathG.fillStyle(0x3a2d1e, 0.4); 
-      pathG.fillRect(0, y - 18, GAME_WIDTH, 36);
-
-      // Bordes del sendero (tierra más oscura)
-      pathG.fillStyle(0x1a1610, 0.3);
-      pathG.fillRect(0, y - 20, GAME_WIDTH, 2);
-      pathG.fillRect(0, y + 18, GAME_WIDTH, 2);
-
-      // Postes pequeños decorativos a los lados
-      pathG.fillStyle(0x111111, 0.4);
-      for (let px = 20; px < GAME_WIDTH; px += 80) {
-        pathG.fillRect(px, y - 24, 2, 6);
-      }
+      // banda de pisada apenas perceptible
+      pathG.fillStyle(0x000000, 0.10);
+      pathG.fillRect(0, y - 16, GAME_WIDTH, 32);
+      // líneas divisorias finas
+      pathG.fillStyle(0xffffff, 0.025);
+      pathG.fillRect(0, y - 17, GAME_WIDTH, 1);
+      pathG.fillStyle(0x000000, 0.12);
+      pathG.fillRect(0, y + 16, GAME_WIDTH, 1);
     }
   }
 
@@ -183,51 +178,14 @@ export class BattleScene extends Phaser.Scene {
   // ═══════════════════════════════════════════════════════════
 
   private drawBases(): void {
-    this.drawAllyBase();
-    this.drawEnemyBase();
-  }
-
-  private drawAllyBase(): void {
-    const x = FIELD.ALLY_BASE_X;
-    const cy = FIELD.CENTER_Y;
-    const bw = 150;
-    const bh = 210; // estructura alta que cubre los carriles
-
-    // Dibujar el búnker / trinchera aliada (extremo izquierdo)
-    const bunker = this.add.image(x, cy, 'ally-bunker');
-    bunker.setDepth(100);
-    bunker.setDisplaySize(bw, bh);
-
-    // HQ label
-    this.add.text(x, cy - bh / 2 - 6, 'BASE ARGENTINA', {
-      fontFamily: FONTS.title,
-      fontSize: '13px',
-      color: hex(COLORS.ink),
-      stroke: hex(0x000000),
-      strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(101);
-  }
-
-  private drawEnemyBase(): void {
-    const x = FIELD.ENEMY_BASE_X;
-    const cy = FIELD.CENTER_Y;
-    const bw = 150;
-    const bh = 210;
-
-    // Dibujar el búnker enemigo (extremo derecho)
-    const bunker = this.add.image(x, cy, 'enemy-bunker');
-    bunker.setDepth(100);
-    bunker.setDisplaySize(bw, bh);
-    bunker.setFlipX(true); // Orientar el bastión hacia la izquierda
-
-    // Label del búnker enemigo
-    this.add.text(x, cy - bh / 2 - 6, 'BÚNKER ENEMIGO', {
-      fontFamily: FONTS.title,
-      fontSize: '13px',
-      color: hex(COLORS.serum),
-      stroke: hex(0x000000),
-      strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(101);
+    // El fondo 16:9 (battlefield.jpg) ya trae la trinchera argentina a la izquierda
+    // y el búnker enemigo a la derecha pintados como parte de la ilustración.
+    // Las "bases" son zonas de daño numéricas en FIELD (ALLY_BASE_X / ENEMY_BASE_X),
+    // no necesitan sprites encima. Reforzamos con un sutil resplandor de zona.
+    const allyGlow = this.add.ellipse(FIELD.ALLY_BASE_X, FIELD.CENTER_Y, 90, 280, 0x6bd0ff, 0.05);
+    allyGlow.setDepth(-80);
+    const enemyGlow = this.add.ellipse(FIELD.ENEMY_BASE_X, FIELD.CENTER_Y, 110, 300, 0x5ee03a, 0.06);
+    enemyGlow.setDepth(-80);
   }
 
   // ═══════════════════════════════════════════════════════════

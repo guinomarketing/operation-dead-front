@@ -10,7 +10,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('bg_battlefield', '/assets/backgrounds/battlefield.png');
+    this.load.image('bg_battlefield', '/assets/backgrounds/keyart-main.jpg');
   }
 
   create(): void {

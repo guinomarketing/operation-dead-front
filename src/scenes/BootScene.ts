@@ -12,8 +12,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Cargar fondo de batalla
-    this.load.image('battlefield', 'assets/backgrounds/battlefield.png');
+    // Cargar fondo de batalla (16:9, generado con Magnific)
+    this.load.image('battlefield', 'assets/backgrounds/battlefield.jpg');
 
     // Cargar sprites crudos con fondo negro
     this.load.image('raw-ally-bunker', 'assets/sprites/ally-bunker.png');
