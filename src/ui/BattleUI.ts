@@ -53,7 +53,7 @@ export class BattleUI {
     statsDiv.style.gap = '15px';
 
     const suppliesDiv = document.createElement('div');
-    suppliesDiv.innerHTML = `<span style="color:var(--primary); font-size:11px; font-weight:bold; letter-spacing:1px;">SUPPLIES</span><br/>`;
+    suppliesDiv.innerHTML = `<span style="color:#aaa; font-size:11px; font-weight:bold; letter-spacing:1px;">SUMINISTROS</span><br/>`;
     this.suppliesEl = document.createElement('span');
     this.suppliesEl.style.fontSize = '20px';
     this.suppliesEl.style.fontFamily = 'var(--font-title)';
@@ -61,7 +61,7 @@ export class BattleUI {
     suppliesDiv.appendChild(this.suppliesEl);
 
     const killsDiv = document.createElement('div');
-    killsDiv.innerHTML = `<span style="color:#aaa; font-size:11px; font-weight:bold; letter-spacing:1px;">KILLS</span><br/>`;
+    killsDiv.innerHTML = `<span style="color:#aaa; font-size:11px; font-weight:bold; letter-spacing:1px;">BAJAS</span><br/>`;
     this.killsEl = document.createElement('span');
     this.killsEl.style.fontSize = '20px';
     this.killsEl.style.fontFamily = 'var(--font-title)';
@@ -71,7 +71,7 @@ export class BattleUI {
     // Barra de Moral
     const moraleDiv = document.createElement('div');
     moraleDiv.style.width = '100px';
-    moraleDiv.innerHTML = `<span style="color:#eab308; font-size:11px; font-weight:bold; letter-spacing:1px;">MORALE</span><br/>`;
+    moraleDiv.innerHTML = `<span style="color:#eab308; font-size:11px; font-weight:bold; letter-spacing:1px;">MORAL</span><br/>`;
     
     const moraleBarBg = document.createElement('div');
     moraleBarBg.style.width = '100%';
@@ -119,8 +119,18 @@ export class BattleUI {
     this.allyHpText = allyDiv.text;
     basesDiv.appendChild(allyDiv.container);
 
-    // Bastión Enemigo BASTION / EISENFAUST
-    const enemyLabel = this.nodeType === 'boss' ? 'EISENFAUST' : 'BASTION';
+    // Bastión Enemigo / Boss
+    let enemyLabel = 'BÚNKER';
+    if (this.nodeType === 'boss') {
+      const runState = this.scene.game.registry.get('runState');
+      if (runState && runState.operationId === 'op-hollow-town') {
+        enemyLabel = 'TOTENKOPF';
+      } else if (runState && runState.operationId === 'op-iron-grave') {
+        enemyLabel = 'LOCOMOTORA';
+      } else {
+        enemyLabel = 'GRÜBER';
+      }
+    }
     const enemyDiv = this.createHpBar(enemyLabel, '#ef4444');
     this.enemyHpBarInner = enemyDiv.barInner;
     this.enemyHpText = enemyDiv.text;
@@ -148,8 +158,8 @@ export class BattleUI {
     abilitiesRow.style.pointerEvents = 'auto';
 
     const abilityDefs = [
-      { id: 'airstrike', label: '💥 AIRSTRIKE', cost: 50 },
-      { id: 'medkit', label: '✚ MEDKIT', cost: 30 }
+      { id: 'airstrike', label: '💥 A. AÉREO', cost: 50 },
+      { id: 'medkit', label: '✚ BOTIQUÍN', cost: 30 }
     ];
 
     for (const ab of abilityDefs) {

@@ -38,4 +38,5 @@ export interface UnitDef {
   traits: UnitTrait[];
   tags: string[];         // 'infantry' | 'organic' | 'specialist' | ...
   placeholder: PlaceholderArt;
+  phrase?: string;
 }

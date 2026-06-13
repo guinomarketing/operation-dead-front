@@ -84,7 +84,8 @@ export class ResultScene extends Phaser.Scene {
     let delay = 0;
 
     // Title
-    const title = this.add.text(cx, 240, won ? 'BASTION FALLEN' : 'HQ OVERRUN', {
+    const titleText = won ? (this.nodeType === 'boss' ? 'BÚNKER DESTRUIDO' : 'VICTORIA') : 'TRINCHERA CAÍDA';
+    const title = this.add.text(cx, 240, titleText, {
       fontFamily: FONTS.title,
       fontSize: '46px',
       color: won ? hex(COLORS.gold) : hex(COLORS.hpBad),
@@ -96,8 +97,8 @@ export class ResultScene extends Phaser.Scene {
 
     // Subtitle
     const subText = won 
-      ? (this.nodeType === 'boss' ? 'The Reich commander has fallen. The sector is secure.' : 'The line held. The dead go back to the ground.') 
-      : 'The dead poured through. The front collapsed.';
+      ? (this.nodeType === 'boss' ? 'El mando de la secta ha caído. El sector está asegurado.' : 'La línea resistió. Los muertos vuelven a la tierra.') 
+      : 'Los muertos rompieron el frente. La trinchera colapsó.';
       
     const sub = this.add.text(cx, 290, subText, {
       fontFamily: FONTS.body,
@@ -131,7 +132,7 @@ export class ResultScene extends Phaser.Scene {
       }
     } else {
       this.time.delayedCall(delay, () => {
-        this.makeButton(cx, 540, 'TRY AGAIN', () => {
+        this.makeButton(cx, 540, 'REINTENTAR', () => {
           // Restore playable HP & morale to retry battle
           const runState = this.game.registry.get('runState');
           if (runState) {
@@ -141,13 +142,13 @@ export class ResultScene extends Phaser.Scene {
           }
           this.transition('Battle');
         }, COLORS.enemyBase);
-        this.makeButton(cx, 640, 'MAIN MENU', () => this.transition('MainMenu'), COLORS.metalDark);
+        this.makeButton(cx, 640, 'MENÚ PRINCIPAL', () => this.transition('MainMenu'), COLORS.metalDark);
       });
     }
   }
 
   private showRewards(cx: number, delay: number): void {
-    const title = this.add.text(cx, 370, 'CHOOSE A REWARD', {
+    const title = this.add.text(cx, 370, 'ELEGÍ UNA RECOMPENSA', {
       fontFamily: FONTS.title,
       fontSize: '22px',
       color: hex(COLORS.gold),
@@ -252,8 +253,8 @@ export class ResultScene extends Phaser.Scene {
             title.destroy();
             
             // Show continuation buttons
-            this.makeButton(cx, 540, 'BACK TO MAP', () => this.transition('Map'), COLORS.allyBase);
-            this.makeButton(cx, 640, 'MAIN MENU', () => this.transition('MainMenu'), COLORS.metalDark);
+            this.makeButton(cx, 540, 'VOLVER AL MAPA', () => this.transition('Map'), COLORS.allyBase);
+            this.makeButton(cx, 640, 'MENÚ PRINCIPAL', () => this.transition('MainMenu'), COLORS.metalDark);
           }
         });
       });
@@ -262,14 +263,19 @@ export class ResultScene extends Phaser.Scene {
   }
 
   private showCampaignVictory(cx: number, delay: number): void {
-    const title = this.add.text(cx, 370, 'OPERATION FIRST LIGHT', {
+    const runState = this.game.registry.get('runState');
+    const opName = runState && runState.operationId ? (runState.operationId === 'op-first-light' ? 'OPERACIÓN VIENTO BLANCO' : (runState.operationId === 'op-hollow-town' ? 'OPERACIÓN PUEBLO FANTASMA' : 'OPERACIÓN FUNDICIÓN NEGRA')) : 'CAMPAÑA COMPLETADA';
+    const title = this.add.text(cx, 370, opName, {
       fontFamily: FONTS.title,
       fontSize: '24px',
       color: hex(COLORS.gold),
       shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 4, fill: true }
     }).setOrigin(0.5).setAlpha(0);
 
-    const desc = this.add.text(cx, 440, 'General Eisenfaust is dead. The remaining undead forces\nare scattering. The trenches are secured.\n\nYou have successfully completed the Operation.', {
+    const bossName = runState && runState.operationId === 'op-first-light' ? 'El Coronel Von Grüber' : (runState && runState.operationId === 'op-hollow-town' ? 'El Doctor Von Totenkopf' : 'La Locomotora Profanadora');
+    const descText = `${bossName} ha sido derrotado. Las fuerzas de la secta se dispersan\nen retirada. La Patagonia está a salvo... por ahora.\n\nCompletaste la operación con éxito.`;
+
+    const desc = this.add.text(cx, 440, descText, {
       fontFamily: FONTS.body,
       fontSize: '14px',
       color: '#fff',
@@ -292,7 +298,7 @@ export class ResultScene extends Phaser.Scene {
         }
         this.game.registry.set('runState', runState);
       }
-      this.makeButton(cx, 570, 'MAIN MENU', () => this.transition('MainMenu'), COLORS.allyBase);
+      this.makeButton(cx, 570, 'MENÚ PRINCIPAL', () => this.transition('MainMenu'), COLORS.allyBase);
     });
   }
 

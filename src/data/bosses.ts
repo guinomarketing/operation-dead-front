@@ -8,12 +8,12 @@ import type { BossDef } from '../types/EnemyTypes';
 export const BOSSES: BossDef[] = [
   {
     id: 'general-eisenfaust',
-    name: 'General Eisenfaust',
-    title: 'The Iron Fist of the Last March',
+    name: 'Coronel Von Grüber',
+    title: 'El Terror Blindado del Búnker',
     tier: 'boss',
     behaviors: ['advance'],
     description:
-      'A dead general with a hydraulic arm, still fighting a war that ended for him long ago.',
+      'Un robusto coronel reanimado con una gabardina militar desgarrada y una prótesis hidráulica oxidada.',
     stats: {
       maxHp: 1200, damage: 35, attackInterval: 2400, range: 40, moveSpeed: 12, armor: 3,
       aoeRadius: 90,
@@ -27,36 +27,36 @@ export const BOSSES: BossDef[] = [
     phases: [
       {
         untilHpPct: 70,
-        description: 'Commands from the rear: summons 3 Revenant Grunts every 8 seconds.',
+        description: 'Ordena desde atrás: invoca 3 Zombis del Cóndor cada 8 segundos.',
         abilities: [
           {
             id: 'summon',
             cooldown: 8000,
-            description: 'Summons 3 Revenant Grunts at the enemy spawn line.',
+            description: 'Invoca 3 Zombis del Cóndor en la línea de spawn enemiga.',
             params: { enemyId: 'revenant-grunt', count: 3 },
           },
         ],
       },
       {
         untilHpPct: 35,
-        description: 'Joins the front: personal command aura (+20% damage to nearby Reich units) and ground slam.',
+        description: 'Carga al frente: aura de comando (+25% daño, +15% velocidad a zombis) y ataques en área.',
         abilities: [
           {
             id: 'summon',
             cooldown: 8000,
-            description: 'Summons 3 Revenant Grunts at the enemy spawn line.',
+            description: 'Invoca 3 Zombis del Cóndor en la línea de spawn enemiga.',
             params: { enemyId: 'revenant-grunt', count: 3 },
           },
         ],
       },
       {
         untilHpPct: 0,
-        description: 'Iron rage: summons Runner Corpses every 5 seconds and speeds up 30%.',
+        description: 'Furia de metal: invoca Infectados Veloces cada 5 segundos y aumenta su velocidad 30%.',
         abilities: [
           {
             id: 'summon',
             cooldown: 5000,
-            description: 'Summons 2 Runner Corpses at the enemy spawn line.',
+            description: 'Invoca 2 Infectados Veloces en la línea de spawn.',
             params: { enemyId: 'runner-corpse', count: 2 },
           },
         ],
@@ -66,12 +66,12 @@ export const BOSSES: BossDef[] = [
   },
   {
     id: 'doctor-totenkopf',
-    name: 'Doctor Totenkopf',
-    title: 'Father of the Serum',
+    name: 'Doctor Von Totenkopf',
+    title: 'Creador del Suero Cóndor',
     tier: 'boss',
     behaviors: ['caster'],
     description:
-      'The mind behind the Umbra Project. Improves his creations mid-battle and patches them with serum.',
+      'La mente oscura detrás del Proyecto Umbra. Inyecta mutágenos a sus creaciones y cura sus heridas con suero.',
     stats: { maxHp: 950, damage: 10, attackInterval: 1600, range: 180, moveSpeed: 14, armor: 1 },
     bounty: 100,
     intelGain: 5,
@@ -82,55 +82,55 @@ export const BOSSES: BossDef[] = [
     phases: [
       {
         untilHpPct: 60,
-        description: 'Field tests: mutates one living enemy every 10s, drops serum healing zones.',
+        description: 'Ensayos de campo: muta un zombi cada 10s y derrama zonas de curación.',
         abilities: [
           {
             id: 'mutate',
             cooldown: 10000,
-            description: 'Mutates a living enemy: +50% max HP and +30% damage.',
+            description: 'Muta a un enemigo: +50% HP máximo y +30% de daño.',
             params: { hpMult: 1.5, damageMult: 1.3 },
           },
           {
             id: 'heal-zone',
             cooldown: 12000,
-            description: 'Serum spill: heals Reich units 10 HP/s in a 110 px radius for 5s.',
+            description: 'Derrame de suero: cura a las unidades de la secta 10 HP/s en un radio de 110px por 5s.',
             params: { healPerSecond: 10, radius: 110, durationMs: 5000 },
           },
         ],
       },
       {
         untilHpPct: 30,
-        description: 'Accelerated trials: mutation cooldown drops to 7 seconds.',
+        description: 'Pruebas aceleradas: el cooldown de mutación disminuye a 7 segundos.',
         abilities: [
           {
             id: 'mutate',
             cooldown: 7000,
-            description: 'Mutates a living enemy: +50% max HP and +30% damage.',
+            description: 'Muta a un enemigo: +50% HP máximo y +30% de daño.',
             params: { hpMult: 1.5, damageMult: 1.3 },
           },
           {
             id: 'heal-zone',
             cooldown: 12000,
-            description: 'Serum spill: heals Reich units 10 HP/s in a 110 px radius for 5s.',
+            description: 'Derrame de suero: cura a las unidades de la secta 10 HP/s en un radio de 110px por 5s.',
             params: { healPerSecond: 10, radius: 110, durationMs: 5000 },
           },
         ],
       },
       {
         untilHpPct: 0,
-        description: 'Self-injection: doubles his damage and gains +40% speed, but his flesh sheds all armor.',
+        description: 'Autoinyección: duplica su daño y gana +40% de velocidad, pero pierde toda armadura.',
         statOverrides: { damage: 20, moveSpeed: 20, armor: 0 },
       },
     ],
   },
   {
     id: 'panzer-corpse-engine',
-    name: 'Panzer Corpse Engine',
-    title: 'The Rolling Grave',
+    name: 'Locomotora Profanadora',
+    title: 'La Tumba de Acero Rodante',
     tier: 'boss',
     behaviors: ['siege'],
     description:
-      'A living tank welded from steel and the dead. Slow as a funeral, hits like the end of one.',
+      'Un tanque viviente ensamblado con chatarra pesada y cuerpos reanimados. Lento pero devastador.',
     stats: {
       maxHp: 2000, damage: 50, attackInterval: 6000, range: 200, moveSpeed: 6, armor: 8,
       aoeRadius: 100,
@@ -139,7 +139,7 @@ export const BOSSES: BossDef[] = [
       {
         id: 'cannon',
         cooldown: 6000,
-        description: 'Fires its corpse-cannon: 50 damage in a 100 px radius.',
+        description: 'Dispara su cañón de cadáveres: 50 de daño en un radio de 100px.',
         params: { damage: 50, radius: 100 },
       },
     ],
@@ -152,25 +152,25 @@ export const BOSSES: BossDef[] = [
     phases: [
       {
         untilHpPct: 50,
-        description: 'Armored advance: sheds 2 Scrap Grunts each time it loses 20% HP (80/60/40/20%).',
+        description: 'Avance blindado: suelta 2 Zombis del Cóndor al perder 20% de HP (80/60/40/20%).',
         abilities: [
           {
             id: 'summon',
             cooldown: 0,
-            description: 'On each 20% HP threshold, 2 Revenant Grunts crawl out of the wreck.',
+            description: 'En cada umbral del 20% de HP, 2 Zombis del Cóndor caen de la chatarra.',
             params: { enemyId: 'revenant-grunt', count: 2, onHpThresholdPct: 20 },
           },
         ],
       },
       {
         untilHpPct: 0,
-        description: 'Exposed engine: armor drops to 3, speed rises, cannon reloads faster.',
+        description: 'Motor expuesto: la armadura cae a 3, aumenta su velocidad y recarga más rápido el cañón.',
         statOverrides: { armor: 3, moveSpeed: 10, attackInterval: 4500 },
         abilities: [
           {
             id: 'cannon',
             cooldown: 4500,
-            description: 'Fires its corpse-cannon: 50 damage in a 100 px radius.',
+            description: 'Dispara su cañón de cadáveres: 50 de daño en un radio de 100px.',
             params: { damage: 50, radius: 100 },
           },
         ],

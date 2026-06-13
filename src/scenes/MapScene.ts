@@ -278,14 +278,14 @@ export class MapScene extends Phaser.Scene {
     // HQ Bar
     const hqDiv = document.createElement('div');
     hqDiv.style.width = '100px';
-    hqDiv.innerHTML = `<span style="color:#3b82f6; font-size:10px; font-weight:bold; letter-spacing:1px;">HQ HEALTH</span>`;
+    hqDiv.innerHTML = `<span style="color:#3b82f6; font-size:10px; font-weight:bold; letter-spacing:1px;">VIDA BASE</span>`;
     const hqBar = this.createProgressBar('#3b82f6', this.runState.baseHp / this.runState.baseMaxHp, `${this.runState.baseHp}/${this.runState.baseMaxHp}`);
     hqDiv.appendChild(hqBar);
 
     // Moral Bar
     const moraleDiv = document.createElement('div');
     moraleDiv.style.width = '100px';
-    moraleDiv.innerHTML = `<span style="color:#eab308; font-size:10px; font-weight:bold; letter-spacing:1px;">MORALE</span>`;
+    moraleDiv.innerHTML = `<span style="color:#eab308; font-size:10px; font-weight:bold; letter-spacing:1px;">MORAL</span>`;
     const moraleBar = this.createProgressBar('#eab308', this.runState.morale / 100, `${this.runState.morale}/100`);
     moraleDiv.appendChild(moraleBar);
 
@@ -301,8 +301,8 @@ export class MapScene extends Phaser.Scene {
 
     currencyDiv.innerHTML = `
       <div style="color:var(--primary)">⬢ ${this.runState.intelEarned} <span style="font-family:var(--font-body); font-size:10px; color:#aaa;">INTEL</span></div>
-      <div style="color:#eab308">★ ${this.runState.medalsEarned} <span style="font-family:var(--font-body); font-size:10px; color:#aaa;">MEDALS</span></div>
-      <div style="color:#fff">⚙ ${this.runState.upgradeIds.length} <span style="font-family:var(--font-body); font-size:10px; color:#aaa;">UPGRADES</span></div>
+      <div style="color:#eab308">★ ${this.runState.medalsEarned} <span style="font-family:var(--font-body); font-size:10px; color:#aaa;">MEDALLAS</span></div>
+      <div style="color:#fff">⚙ ${this.runState.upgradeIds.length} <span style="font-family:var(--font-body); font-size:10px; color:#aaa;">MEJORAS</span></div>
     `;
 
     // Derecha: Botón Salir / Retirarse
@@ -314,7 +314,7 @@ export class MapScene extends Phaser.Scene {
     exitBtn.style.fontSize = '11px';
     exitBtn.style.fontWeight = 'bold';
     exitBtn.style.cursor = 'pointer';
-    exitBtn.innerText = 'RETIRE';
+    exitBtn.innerText = 'RETIRARSE';
     exitBtn.onclick = () => {
       this.cameras.main.fadeOut(400, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
@@ -464,7 +464,7 @@ export class MapScene extends Phaser.Scene {
     // Botón Continuar
     const nextBtn = document.createElement('button');
     nextBtn.className = 'btn-primary';
-    nextBtn.innerText = 'CONTINUE MISSION';
+    nextBtn.innerText = 'CONTINUAR MISIÓN';
     nextBtn.style.marginTop = '20px';
     nextBtn.style.width = '100%';
     nextBtn.onclick = () => {
@@ -499,7 +499,7 @@ export class MapScene extends Phaser.Scene {
     modal.style.zIndex = '100';
 
     const title = document.createElement('h2');
-    title.innerText = 'REQUISITIONS & SUPPLIES';
+    title.innerText = 'REQUISICIÓN Y SUMINISTROS';
     title.style.fontFamily = 'var(--font-title)';
     title.style.fontSize = '22px';
     title.style.color = 'var(--primary)';
@@ -508,7 +508,7 @@ export class MapScene extends Phaser.Scene {
     title.style.paddingBottom = '8px';
 
     const desc = document.createElement('p');
-    desc.innerText = 'Acquire tactical upgrades or field kits using your Intel credentials.';
+    desc.innerText = 'Adquirí mejoras tácticas o kits de campaña usando tus credenciales de Intel.';
     desc.style.fontSize = '12px';
     desc.style.color = '#aaa';
 
@@ -519,13 +519,13 @@ export class MapScene extends Phaser.Scene {
     itemsDiv.style.margin = '15px 0';
 
     // Artículos en venta (3 mejoras aleatorias + kit médico)
-    // Usaremos un coste fijo de 2 Intel para Upgrades, 1 Intel para curar
+    // Usaremos un coste de 2 Intel para Upgrades, 1 Intel para curar
     const shopOffers = [
-      { id: 'barracks-1', name: 'Hardened Recruits', desc: 'Riflemen gain +20% HP.', cost: 2 },
-      { id: 'armory-1', name: 'Fresh Ammunition', desc: 'All allies gain +10% damage.', cost: 2 },
-      { id: 'med-tent-1', name: 'Better Bandages', desc: 'Medics heal +30% more.', cost: 2 },
-      { id: 'engineering-bay-1', name: 'Reinforced Barricades', desc: 'Barricades gain +50% HP.', cost: 2 },
-      { id: 'war-room-1', name: 'Direct Line', desc: 'Commander CDs reduced by 20%.', cost: 2 },
+      { id: 'barracks-1', name: 'Reclutas Curtidos', desc: 'Los Conscriptos ganan +20% HP.', cost: 2 },
+      { id: 'armory-1', name: 'Munición Fresca', desc: 'Todos los aliados ganan +10% de daño.', cost: 2 },
+      { id: 'med-tent-1', name: 'Vendas de Gasa Fuerte', desc: 'Médicos curan +30% más.', cost: 2 },
+      { id: 'engineering-bay-1', name: 'Barricadas Reforzadas', desc: 'Barricadas ganan +50% HP.', cost: 2 },
+      { id: 'war-room-1', name: 'Línea Directa', desc: 'CDs de comandante bajan 20%.', cost: 2 },
     ];
 
     // Mezclar y ofrecer 2
@@ -543,7 +543,7 @@ export class MapScene extends Phaser.Scene {
     });
 
     // Añadir siempre la opción de curar HP del HQ
-    const healOffer = { name: 'Field Medical Kit', desc: 'Restores +30 HP to the HQ.', cost: 1 };
+    const healOffer = { name: 'Botiquín de Campaña', desc: 'Restaura +30 HP a la base aliada.', cost: 1 };
     const healRow = this.createShopItemRow(healOffer.name, healOffer.desc, healOffer.cost, () => {
       this.runState.intelEarned -= healOffer.cost;
       this.runState.baseHp = Math.min(this.runState.baseMaxHp, this.runState.baseHp + 30);
@@ -554,7 +554,7 @@ export class MapScene extends Phaser.Scene {
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'btn-primary';
-    closeBtn.innerText = 'LEAVE STATION';
+    closeBtn.innerText = 'SALIR DE LA ESTACIÓN';
     closeBtn.onclick = () => {
       this.runState.visitedNodeIds.push(this.runState.currentNodeId!);
       this.game.registry.set('runState', this.runState);
@@ -584,7 +584,7 @@ export class MapScene extends Phaser.Scene {
     buyBtn.className = 'btn-primary';
     buyBtn.style.padding = '6px 12px';
     buyBtn.style.fontSize = '12px';
-    buyBtn.innerHTML = `BUY ⬢ ${cost}`;
+    buyBtn.innerHTML = `COMPRAR ⬢ ${cost}`;
 
     const hasIntel = this.runState.intelEarned >= cost;
     
@@ -594,7 +594,7 @@ export class MapScene extends Phaser.Scene {
     const alreadyOwned = upDef ? this.runState.upgradeIds.includes(upDef.id) : false;
 
     if (alreadyOwned) {
-      buyBtn.innerText = 'OWNED';
+      buyBtn.innerText = 'ADQUIRIDO';
       buyBtn.disabled = true;
       buyBtn.style.opacity = '0.5';
     } else if (!hasIntel) {
@@ -604,7 +604,7 @@ export class MapScene extends Phaser.Scene {
       buyBtn.onclick = () => {
         onBuy();
         row.style.opacity = '0.5';
-        buyBtn.innerText = 'BOUGHT';
+        buyBtn.innerText = 'COMPRADO';
         buyBtn.disabled = true;
       };
     }
@@ -636,7 +636,7 @@ export class MapScene extends Phaser.Scene {
     modal.style.zIndex = '100';
 
     const title = document.createElement('h2');
-    title.innerText = 'FIELD HEADQUARTERS';
+    title.innerText = 'CUARTEL DE CAMPAÑA';
     title.style.fontFamily = 'var(--font-title)';
     title.style.fontSize = '22px';
     title.style.color = 'var(--primary)';
@@ -645,7 +645,7 @@ export class MapScene extends Phaser.Scene {
     title.style.paddingBottom = '8px';
 
     const desc = document.createElement('p');
-    desc.innerText = 'Secure area. Command must choose how to deploy remaining resources for the battalion.';
+    desc.innerText = 'Zona segura. El mando táctico debe elegir cómo distribuir los recursos del batallón.';
     desc.style.fontSize = '13px';
     desc.style.lineHeight = '1.4';
     desc.style.color = '#ccc';
@@ -660,7 +660,7 @@ export class MapScene extends Phaser.Scene {
     restBtn.className = 'btn-primary';
     restBtn.style.flex = '1';
     restBtn.style.height = '80px';
-    restBtn.innerHTML = `<span style="font-size:18px;">🛠 REPAIR HQ</span><br/><span style="font-size:11px; color:#222; font-weight:bold;">(+30 HQ Health)</span>`;
+    restBtn.innerHTML = `<span style="font-size:18px;">🛠 REPARAR BASE</span><br/><span style="font-size:11px; color:#222; font-weight:bold;">(+30 Salud HQ)</span>`;
     restBtn.onclick = () => {
       this.runState.baseHp = Math.min(this.runState.baseMaxHp, this.runState.baseHp + 30);
       this.completeCamp(modal);
@@ -671,7 +671,7 @@ export class MapScene extends Phaser.Scene {
     rallyBtn.className = 'btn-primary';
     rallyBtn.style.flex = '1';
     rallyBtn.style.height = '80px';
-    rallyBtn.innerHTML = `<span style="font-size:18px;">📣 RALLY TROOPS</span><br/><span style="font-size:11px; color:#222; font-weight:bold;">(+20 Morale)</span>`;
+    rallyBtn.innerHTML = `<span style="font-size:18px;">📣 ARENGAR TROPA</span><br/><span style="font-size:11px; color:#222; font-weight:bold;">(+20 Moral)</span>`;
     rallyBtn.onclick = () => {
       this.runState.morale = Math.min(100, this.runState.morale + 20);
       this.completeCamp(modal);

@@ -44,10 +44,10 @@ export class MainMenuScene extends Phaser.Scene {
     menuDiv.id = 'main-menu-ui';
 
     const title = document.createElement('h1');
-    title.innerHTML = 'OPERATION<br/>DEAD FRONT';
+    title.innerHTML = 'OPERACIÓN<br/>CÓNDOR MUERTO';
 
     const subtitle = document.createElement('p');
-    subtitle.innerText = 'The dead march under a stolen flag.\nHold the line. Bury them again.';
+    subtitle.innerText = 'La Legión marcha bajo una bandera robada.\nSostené la línea. Enterralos de nuevo.';
     subtitle.style.fontSize = '1.2rem';
     subtitle.style.color = '#ccc';
     subtitle.style.textAlign = 'center';
@@ -57,7 +57,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const startBtn = document.createElement('button');
     startBtn.className = 'btn-primary';
-    startBtn.innerText = 'Deploy';
+    startBtn.innerText = 'DESPLEGAR';
     startBtn.style.padding = '16px 48px';
     startBtn.style.fontSize = '1.8rem';
     

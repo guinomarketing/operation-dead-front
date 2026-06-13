@@ -97,7 +97,7 @@ export class BattleScene extends Phaser.Scene {
       this.time.delayedCall(800, () => {
         this.cameras.main.flash(400, 150, 0, 0);
         this.cameras.main.shake(400, 0.01);
-        const splash = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, 'GENERAL EISENFAUST', {
+        const splash = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, 'CORONEL VON GRÜBER', {
           fontFamily: FONTS.title,
           fontSize: '32px',
           color: '#ef4444',
@@ -106,7 +106,7 @@ export class BattleScene extends Phaser.Scene {
           strokeThickness: 5
         }).setOrigin(0.5).setDepth(880);
         
-        const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, 'The Iron Fist of the Last March', {
+        const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, 'El Terror Blindado del Búnker', {
           fontFamily: FONTS.body,
           fontSize: '16px',
           color: '#ffffff',
@@ -700,7 +700,7 @@ export class BattleScene extends Phaser.Scene {
           flash.setDepth(870);
           this.tweens.add({ targets: flash, alpha: 0, duration: 800, onComplete: () => flash.destroy() });
           
-          const txt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, 'WARNING: BOSS ENRAGED', {
+          const txt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, '¡JEFE ENFURECIDO!', {
             fontFamily: FONTS.title,
             fontSize: '28px',
             color: '#ff3333',

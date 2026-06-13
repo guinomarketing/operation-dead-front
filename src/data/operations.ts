@@ -4,11 +4,11 @@ import type { OperationDef } from '../types/RunTypes';
 export const OPERATIONS: OperationDef[] = [
   {
     id: 'op-first-light',
-    name: 'Operation First Light',
-    codename: 'FIRST LIGHT',
+    name: 'Operación Viento Blanco',
+    codename: 'VIENTO BLANCO',
     biome: 'trenches',
     description:
-      'The trench lines where the Last March began. Hold the old front and put General Eisenfaust back in the ground.',
+      'Las trincheras congeladas de la estepa profunda. Resistí el avance de la Legión y devolvé al Coronel Von Grüber a la tumba.',
     rows: [8, 9],
     enemyPool: ['revenant-grunt', 'runner-corpse', 'shielded-revenant', 'exploder', 'rot-hound'],
     elitePool: ['dead-officer', 'occultist'],
@@ -18,11 +18,11 @@ export const OPERATIONS: OperationDef[] = [
   },
   {
     id: 'op-hollow-town',
-    name: 'Operation Hollow Town',
-    codename: 'HOLLOW TOWN',
+    name: 'Operación Pueblo Fantasma',
+    codename: 'PUEBLO FANTASMA',
     biome: 'ruined-town',
     description:
-      'A town the Reich emptied for its experiments. Doctor Totenkopf is still inside. So are his patients.',
+      'Un pueblo patagónico desalojado por el culto para sus rituales. El Doctor Von Totenkopf y sus creaciones acechan en la niebla.',
     rows: [8, 10],
     enemyPool: ['revenant-grunt', 'runner-corpse', 'exploder', 'rot-hound', 'shielded-revenant'],
     elitePool: ['occultist', 'dead-officer'],
@@ -33,11 +33,11 @@ export const OPERATIONS: OperationDef[] = [
   },
   {
     id: 'op-iron-grave',
-    name: 'Operation Iron Grave',
-    codename: 'IRON GRAVE',
+    name: 'Operación Fundición Negra',
+    codename: 'FUNDICIÓN NEGRA',
     biome: 'iron-works',
     description:
-      'The foundry where the Reich welds its dead into machines. Stop the Rolling Grave before it rolls out.',
+      'La vieja metalúrgica donde la secta ensambla sus monstruosidades mecánicas. Detené a la Locomotora Profanadora.',
     rows: [9, 10],
     enemyPool: ['revenant-grunt', 'shielded-revenant', 'exploder', 'runner-corpse', 'rot-hound'],
     elitePool: ['dead-officer', 'occultist'],
