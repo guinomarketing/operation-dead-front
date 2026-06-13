@@ -28,6 +28,7 @@ export class WaveSystem {
   }
 
   update(dtMs: number): void {
+    if (this.sim.nodeType === 'boss') return; // No regular waves for boss node
     if (this.state.currentWave > this.state.totalWaves) return;
 
     // Grace period between waves
@@ -69,7 +70,11 @@ export class WaveSystem {
     
     // Calculate budget based on wave number
     // Wave 1: base + budget_per_row. Wave 2: base + 2*budget_per_row, etc.
-    this.state.budgetRemaining = WAVES.BASE_BUDGET + (this.state.currentWave * WAVES.BUDGET_PER_ROW);
+    let budget = WAVES.BASE_BUDGET + (this.state.currentWave * WAVES.BUDGET_PER_ROW);
+    if (this.sim.nodeType === 'elite') {
+      budget = Math.round(budget * WAVES.ELITE_NODE_MULT);
+    }
+    this.state.budgetRemaining = budget;
     
     this.state.timeSinceLastSpawn = 0;
     this.state.nextSpawnDelay = 1000; // Fast initial spawn

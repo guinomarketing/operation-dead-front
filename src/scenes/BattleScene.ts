@@ -41,9 +41,25 @@ export class BattleScene extends Phaser.Scene {
     super('Battle');
   }
 
-  create(): void {
-    const activeUpgrades = this.game.registry.get('upgrades') || [];
-    this.sim = new BattleSystem(BASES.ALLY_HP, activeUpgrades);
+  create(data?: { nodeType?: string; battleMode?: string }): void {
+    const runState = this.game.registry.get('runState');
+    const activeUpgrades = runState ? runState.upgradeIds : [];
+    const baseHp = runState ? runState.baseHp : BASES.ALLY_HP;
+
+    const nodeType = data?.nodeType || 'battle';
+    const battleMode = data?.battleMode || 'assault';
+
+    this.sim = new BattleSystem(baseHp, activeUpgrades, nodeType as any, battleMode as any);
+
+    if (runState) {
+      this.sim.morale = runState.morale;
+      if (runState.suppliesBonusNextBattle) {
+        this.sim.supplies += runState.suppliesBonusNextBattle;
+        runState.suppliesBonusNextBattle = 0; // consumir bono
+        this.game.registry.set('runState', runState);
+      }
+    }
+
     this.renderers.clear();
     this.cooldowns.clear();
     this.killCount = 0;
@@ -64,7 +80,8 @@ export class BattleScene extends Phaser.Scene {
     this.ui = new BattleUI(
       this,
       (unitId) => this.selectUnit(unitId),
-      (abilityId) => this.selectAbility(abilityId)
+      (abilityId) => this.selectAbility(abilityId),
+      nodeType
     );
     this.drawVignette();
 
@@ -75,6 +92,41 @@ export class BattleScene extends Phaser.Scene {
 
     // Camera fade in
     this.cameras.main.fadeIn(600, 0, 0, 0);
+
+    if (nodeType === 'boss') {
+      this.time.delayedCall(800, () => {
+        this.cameras.main.flash(400, 150, 0, 0);
+        this.cameras.main.shake(400, 0.01);
+        const splash = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, 'GENERAL EISENFAUST', {
+          fontFamily: FONTS.title,
+          fontSize: '32px',
+          color: '#ef4444',
+          fontStyle: 'bold',
+          stroke: '#000000',
+          strokeThickness: 5
+        }).setOrigin(0.5).setDepth(880);
+        
+        const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, 'The Iron Fist of the Last March', {
+          fontFamily: FONTS.body,
+          fontSize: '16px',
+          color: '#ffffff',
+          fontStyle: 'italic',
+          stroke: '#000000',
+          strokeThickness: 3
+        }).setOrigin(0.5).setDepth(880);
+
+        this.tweens.add({
+          targets: [splash, sub],
+          alpha: 0,
+          delay: 2000,
+          duration: 800,
+          onComplete: () => {
+            splash.destroy();
+            sub.destroy();
+          }
+        });
+      });
+    }
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -626,7 +678,9 @@ export class BattleScene extends Phaser.Scene {
         
         if (ev.faction === 'enemy') {
           this.killCount++;
-          if (ev.defId === 'exploder') {
+          if (ev.defId === 'general-eisenfaust') {
+            this.triggerBossDeathExplosion(ex, ey);
+          } else if (ev.defId === 'exploder') {
             this.triggerExploderExplosion(ex, ey);
           } else {
             this.spawnGreenSmoke(ex, ey);
@@ -639,7 +693,30 @@ export class BattleScene extends Phaser.Scene {
         this.spawnBountyText(Phaser.Math.Between(350, 450), FIELD.LANES_Y[Phaser.Math.Between(0, 2)], ev.amount);
       }
       if (ev.type === 'base-hit') {
-        if (ev.faction === 'ally') {
+        if (ev.amount === 999) {
+          // Boss phase transition
+          this.cameras.main.shake(500, 0.012);
+          const flash = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xff0000, 0.25);
+          flash.setDepth(870);
+          this.tweens.add({ targets: flash, alpha: 0, duration: 800, onComplete: () => flash.destroy() });
+          
+          const txt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, 'WARNING: BOSS ENRAGED', {
+            fontFamily: FONTS.title,
+            fontSize: '28px',
+            color: '#ff3333',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+          }).setOrigin(0.5).setDepth(880);
+          this.tweens.add({
+            targets: txt,
+            y: GAME_HEIGHT / 2 - 150,
+            alpha: 0,
+            delay: 1200,
+            duration: 800,
+            onComplete: () => txt.destroy()
+          });
+        } else if (ev.faction === 'ally') {
           this.cameras.main.shake(150, 0.005);
           // Screen edge flash
           const flash = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.hpBad, 0.08);
@@ -647,6 +724,14 @@ export class BattleScene extends Phaser.Scene {
           this.tweens.add({ targets: flash, alpha: 0, duration: 300, onComplete: () => flash.destroy() });
         } else if (ev.faction === 'enemy') {
           this.cameras.main.shake(80, 0.003);
+        }
+      }
+      if (ev.type === 'heal') {
+        if (ev.faction === 'enemy' && ev.amount === 888) {
+          this.cameras.main.shake(200, 0.006);
+          this.spawnDeployPuff(FIELD.SPAWN_ENEMY_X, FIELD.LANES_Y[0]);
+          this.spawnDeployPuff(FIELD.SPAWN_ENEMY_X, FIELD.LANES_Y[1]);
+          this.spawnDeployPuff(FIELD.SPAWN_ENEMY_X, FIELD.LANES_Y[2]);
         }
       }
     }
@@ -689,6 +774,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private endBattle(outcome: 'won' | 'lost'): void {
+    // Persist HP and Morale back to RunState
+    const runState = this.game.registry.get('runState');
+    if (runState) {
+      runState.baseHp = this.sim.allyBaseHp;
+      runState.morale = this.sim.morale;
+      this.game.registry.set('runState', runState);
+    }
+
     // Dramatic pause
     this.time.delayedCall(600, () => {
       this.cameras.main.fadeOut(400, 0, 0, 0);
@@ -696,7 +789,7 @@ export class BattleScene extends Phaser.Scene {
         // Cleanup ambient timer
         this.ashTimer?.destroy();
         this.ui.destroy();
-        this.scene.start('Result', { outcome });
+        this.scene.start('Result', { outcome, nodeType: this.sim.nodeType });
       });
     });
   }
@@ -737,5 +830,31 @@ export class BattleScene extends Phaser.Scene {
         onComplete: () => smoke.destroy()
       });
     }
+  }
+
+  private triggerBossDeathExplosion(x: number, y: number): void {
+    // Massive screen shake
+    this.cameras.main.shake(800, 0.02);
+    
+    // Multiple delayed explosions
+    for (let i = 0; i < 6; i++) {
+      this.time.delayedCall(i * 120, () => {
+        const bx = x + Phaser.Math.Between(-30, 30);
+        const by = y + Phaser.Math.Between(-30, 30);
+        this.triggerAirstrikeExplosion(bx, by);
+      });
+    }
+
+    // Huge toxic/blood cloud
+    const cloud = this.add.circle(x, y, 90, 0x9c2424, 0.7);
+    cloud.setDepth(y + 10);
+    this.tweens.add({
+      targets: cloud,
+      scaleX: 1.5,
+      scaleY: 1.5,
+      alpha: 0,
+      duration: 1000,
+      onComplete: () => cloud.destroy()
+    });
   }
 }

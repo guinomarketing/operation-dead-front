@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from './utils/constants';
 import { BootScene } from './scenes/BootScene';
 import { MainMenuScene } from './scenes/MainMenuScene';
+import { MapScene } from './scenes/MapScene';
 import { BattleScene } from './scenes/BattleScene';
 import { ResultScene } from './scenes/ResultScene';
 
@@ -19,7 +20,7 @@ const config: Phaser.Types.Core.GameConfig = {
     pixelArt: true,
     antialias: false,
   },
-  scene: [BootScene, MainMenuScene, BattleScene, ResultScene],
+  scene: [BootScene, MainMenuScene, MapScene, BattleScene, ResultScene],
 };
 
 // eslint-disable-next-line no-new

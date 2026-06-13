@@ -22,7 +22,8 @@ export class BattleUI {
   constructor(
     private scene: Phaser.Scene,
     private onSelectCard: (unitId: string) => void,
-    private onSelectAbility: (abilityId: string) => void
+    private onSelectAbility: (abilityId: string) => void,
+    private nodeType: string = 'battle'
   ) {
     this.container = document.getElementById('ui-layer')!;
     this.build();
@@ -118,8 +119,9 @@ export class BattleUI {
     this.allyHpText = allyDiv.text;
     basesDiv.appendChild(allyDiv.container);
 
-    // Bastión Enemigo BASTION
-    const enemyDiv = this.createHpBar('BASTION', '#ef4444');
+    // Bastión Enemigo BASTION / EISENFAUST
+    const enemyLabel = this.nodeType === 'boss' ? 'EISENFAUST' : 'BASTION';
+    const enemyDiv = this.createHpBar(enemyLabel, '#ef4444');
     this.enemyHpBarInner = enemyDiv.barInner;
     this.enemyHpText = enemyDiv.text;
     basesDiv.appendChild(enemyDiv.container);

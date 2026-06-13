@@ -8,9 +8,12 @@ import { UPGRADE_INDEX } from '../data/upgrades';
 
 interface ResultData {
   outcome: 'won' | 'lost';
+  nodeType?: string;
 }
 
 export class ResultScene extends Phaser.Scene {
+  private nodeType: string = 'battle';
+
   constructor() {
     super('Result');
   }
@@ -18,6 +21,7 @@ export class ResultScene extends Phaser.Scene {
   create(data: ResultData): void {
     const cx = GAME_WIDTH / 2;
     const won = data.outcome === 'won';
+    this.nodeType = data.nodeType || 'battle';
 
     this.drawBackground(won);
     this.startAmbientParticles(won);
@@ -92,7 +96,7 @@ export class ResultScene extends Phaser.Scene {
 
     // Subtitle
     const subText = won 
-      ? 'The line held. The dead go back to the ground.' 
+      ? (this.nodeType === 'boss' ? 'The Reich commander has fallen. The sector is secure.' : 'The line held. The dead go back to the ground.') 
       : 'The dead poured through. The front collapsed.';
       
     const sub = this.add.text(cx, 290, subText, {
@@ -120,10 +124,23 @@ export class ResultScene extends Phaser.Scene {
 
     // Upgrades or Buttons
     if (won) {
-      this.showRewards(cx, delay);
+      if (this.nodeType === 'boss') {
+        this.showCampaignVictory(cx, delay);
+      } else {
+        this.showRewards(cx, delay);
+      }
     } else {
       this.time.delayedCall(delay, () => {
-        this.makeButton(cx, 540, 'TRY AGAIN', () => this.transition('Battle'), COLORS.enemyBase);
+        this.makeButton(cx, 540, 'TRY AGAIN', () => {
+          // Restore playable HP & morale to retry battle
+          const runState = this.game.registry.get('runState');
+          if (runState) {
+            runState.baseHp = Math.max(40, runState.baseHp);
+            runState.morale = Math.max(30, runState.morale);
+            this.game.registry.set('runState', runState);
+          }
+          this.transition('Battle');
+        }, COLORS.enemyBase);
         this.makeButton(cx, 640, 'MAIN MENU', () => this.transition('MainMenu'), COLORS.metalDark);
       });
     }
@@ -207,10 +224,21 @@ export class ResultScene extends Phaser.Scene {
         this.tweens.add({ targets: container, scale: 0.95, duration: 60 });
       });
       zone.on('pointerup', () => {
-        // Apply reward
-        const owned = this.game.registry.get('upgrades') || [];
-        owned.push(upId);
-        this.game.registry.set('upgrades', owned);
+        // Apply reward to persistent runState
+        const runState = this.game.registry.get('runState');
+        if (runState) {
+          if (!runState.upgradeIds.includes(upId)) {
+            runState.upgradeIds.push(upId);
+          }
+          // Reward Intel & Medals on victory
+          runState.intelEarned += 1;
+          runState.medalsEarned += 1;
+          // Mark current node as visited
+          if (runState.currentNodeId && !runState.visitedNodeIds.includes(runState.currentNodeId)) {
+            runState.visitedNodeIds.push(runState.currentNodeId);
+          }
+          this.game.registry.set('runState', runState);
+        }
         
         // Clean up cards
         zones.forEach(z => z.destroy());
@@ -224,12 +252,47 @@ export class ResultScene extends Phaser.Scene {
             title.destroy();
             
             // Show continuation buttons
-            this.makeButton(cx, 540, 'NEXT BATTLE', () => this.transition('Battle'), COLORS.allyBase);
+            this.makeButton(cx, 540, 'BACK TO MAP', () => this.transition('Map'), COLORS.allyBase);
             this.makeButton(cx, 640, 'MAIN MENU', () => this.transition('MainMenu'), COLORS.metalDark);
           }
         });
       });
       zones.push(zone);
+    });
+  }
+
+  private showCampaignVictory(cx: number, delay: number): void {
+    const title = this.add.text(cx, 370, 'OPERATION FIRST LIGHT', {
+      fontFamily: FONTS.title,
+      fontSize: '24px',
+      color: hex(COLORS.gold),
+      shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 4, fill: true }
+    }).setOrigin(0.5).setAlpha(0);
+
+    const desc = this.add.text(cx, 440, 'General Eisenfaust is dead. The remaining undead forces\nare scattering. The trenches are secured.\n\nYou have successfully completed the Operation.', {
+      fontFamily: FONTS.body,
+      fontSize: '14px',
+      color: '#fff',
+      align: 'center',
+      lineSpacing: 8,
+      shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 2, fill: true }
+    }).setOrigin(0.5).setAlpha(0);
+
+    this.tweens.add({ targets: title, alpha: 1, duration: 600, delay });
+    this.tweens.add({ targets: desc, alpha: 1, duration: 800, delay: delay + 300 });
+
+    this.time.delayedCall(delay + 1000, () => {
+      // Reward medals for run completion
+      const runState = this.game.registry.get('runState');
+      if (runState) {
+        runState.medalsEarned += 10; // 10 medals for run completion
+        // Also mark current node as visited
+        if (runState.currentNodeId && !runState.visitedNodeIds.includes(runState.currentNodeId)) {
+          runState.visitedNodeIds.push(runState.currentNodeId);
+        }
+        this.game.registry.set('runState', runState);
+      }
+      this.makeButton(cx, 570, 'MAIN MENU', () => this.transition('MainMenu'), COLORS.allyBase);
     });
   }
 

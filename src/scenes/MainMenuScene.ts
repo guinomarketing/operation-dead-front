@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
+import { RunSystem } from '../systems/RunSystem';
 
 export class MainMenuScene extends Phaser.Scene {
   private uiContainer!: HTMLElement | null;
@@ -70,6 +71,12 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   private startGame(menuDiv: HTMLElement) {
+    // Inicializar RunState procedimental (MVP 0.3)
+    const runState = RunSystem.startNewRun();
+    const mapDef = RunSystem.generateMap(runState.seed);
+    this.game.registry.set('runState', runState);
+    this.game.registry.set('mapDef', mapDef);
+
     // Animación de salida de la UI
     menuDiv.style.transition = 'opacity 0.4s ease';
     menuDiv.style.opacity = '0';
@@ -81,8 +88,8 @@ export class MainMenuScene extends Phaser.Scene {
       if (this.uiContainer && menuDiv.parentNode) {
         this.uiContainer.removeChild(menuDiv);
       }
-      // Cambiar de escena
-      this.scene.start('Battle');
+      // Cambiar de escena al mapa táctico en lugar de directo a batalla
+      this.scene.start('Map');
     });
   }
 }

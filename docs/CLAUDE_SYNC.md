@@ -2,42 +2,37 @@
 
 This document is updated automatically to help Claude understand the current state, progress, and architectural decisions made by Antigravity in this project.
 
-## Current State: MVP 0.2 (Wave System & Traits)
+## Current State: MVP 0.3 (The Roguelite Run Loop & Boss Fight) ✅
 
-We have successfully migrated the game logic from MVP 0.1 to MVP 0.2:
-1. **WaveSystem.ts**: Implemented a threat-budget-based wave spawner. It reads threat configurations, budgets, and enemy stats dynamically. Winning the battle occurs when all waves are cleared and remaining enemies are killed.
-2. **Special Combat Traits**: 
-   - `field-medic`: Restores lowest HP ally in radius instead of attacking.
-   - `suppress` (Heavy Gunner): Applies a temporary 15% slow to enemies hit.
-   - `burn` (Flamethrower): Applies a Damage-over-Time (DoT) effect (3 dmg/s for 2s) and deals AoE damage to adjacent targets.
-   - `priority-elite` (Sniper): Scans and attacks targets tagged as `elite` or `miniboss` first.
-3. **UI Integration**: Unlocked all 6 allied units in the deploy bar (Rifleman, Heavy Gunner, Medic, Engineer, Sniper, Flamethrower) with dynamic cooldowns and cost validation.
-
----
-
-## Active Work: Visual & Gameplay Overhaul (MVP 0.2+)
-
-We are currently implementing a complete visual and gameplay overhaul to make the game feel premium and highly interactive:
-1. **Lanes Visualization:** Drawing 3 sutil dirt paths and barbed-wire trenches on the battlefield canvas at `Y` coords `[470, 545, 620]` to define where combat happens.
-2. **Lane Selection Deployment:** Players select a card and then tap a lane on the screen to spawn the unit, giving them direct strategic control.
-3. **Active Commander Powers:** Adding 2 buttons for active powers:
-   - **Airstrike:** Deals 80 damage in a 140px zone after 1s delay (animated with a falling missile trail and a massive explosion).
-   - **Medkit Drop:** Heals 40 HP in a 120px area.
-4. **Engineer Barricade:** Implementing the `build-barricade` trait. Spawning an Engineer deploys a stationary high-HP blocker (`unit-barricade`) in front of him.
-5. **Morale System:** In-battle morale that starts at 70 (max 100). Ally deaths and base damage drop morale. Enemy kills raise it. Reaching 0 morale causes immediate defeat.
-6. **No More Broken Icons:** Pass Phaser scene to HTML UI to export procedural sprites as Base64 data URLs for cards (instead of loading missing PNGs).
+We have successfully completed all core features of **MVP 0.3 (La Run)**:
+1. **Procedural Map & Navigation (`RunSystem.ts`, `MapScene.ts`)**:
+   - Seeds generation for a 9-row grid map connecting nodes dynamically (prevents isolated nodes, no elites in rows 1-2, final Boss on row 8).
+   - Core node types: `battle` (normal fights), `elite` (hard fights with 1.6x threat budget), `event` (narrative event resolution), `supply` (shop using Intel credentials), and `hq` (rest camp to restore +30 base HP or +20 morale).
+   - Semi-transparent HTML/CSS glassmorphic overlays for interactive events, shop requisitions, and camp briefing choices.
+2. **Persistent Run State (`BattleScene.ts`, `ResultScene.ts`)**:
+   - Global state tracks commander, base HP, morale (30-100), upgrades, relics, intel, and medals.
+   - HP and morale are persistent; taking damage in battle is saved to the registry and carried over to the map.
+   - Victory rewards choice of upgrades (which are added to `runState.upgradeIds`) and +1 Intel/Medal before returning to the map.
+3. **General Eisenfaust Boss Fight (`BattleSystem.ts`, `WaveSystem.ts`, `BattleScene.ts`)**:
+   - Skips normal waves. Spawns General Eisenfaust as a high-HP (1200) unit in the center lane.
+   - Enemy bastion health bar is linked to the Boss's health; killing him wins the match.
+   - Dynamic HP threshold phases:
+     - **Phase 1 (HP > 70%)**: Commands from rear, summons 3 Revenant Grunts every 8s.
+     - **Phase 2 (35% < HP <= 70%)**: Joins front, summons 3 grunts every 8s, command aura (+20% damage to nearby Reich units), and ground slam AoE (90px).
+     - **Phase 3 (HP <= 35%)**: Iron rage, summons 2 Runner Corpses every 5s, 30% speed boost (move speed 16), and ground slam AoE.
+   - **Epic Visuals**: Red intro text splash with shake, screenshake on summons, red flash and warning text on phase transition, and chained delayed airstrike explosions + blood/toxic cloud on death.
+4. **Elite Threat Multiplier (`WaveSystem.ts`)**:
+   - Elite battles increase threat spawn budget by a multiplier of `1.6x` for a harder challenge.
 
 ---
 
 ## Code Architecture Guidelines (For Claude)
 
-- **Strict Separation of Concerns:**
-  - `src/systems/`: Pure typescript logic (e.g. `BattleSystem`, `WaveSystem`). **Do NOT import Phaser** here. This logic runs headless for vitest.
-  - `src/scenes/`: Handles Phaser game objects, graphics, particles, and tweens.
-  - `src/ui/`: HTML UI overlay elements (`BattleUI.ts`). Uses CSS variables from `src/style.css` and colors/fonts from `src/ui/colors.ts`.
-  - `src/data/`: Declarative JSON-like typescript data definitions (`units.ts`, `enemies.ts`, `abilities.ts`, etc.).
-  - `src/utils/`: Constants. `constants.ts` is the single source of truth for variables.
-- **Entity Identification:** Combatants use `uid: number` for identification. Avoid comparing objects directly; sync the scene renderers using `uid`.
-- **Canvas Textures:** Dynamic textures (like `unit-medic` or custom zombies) are created via `SpriteFactory.ts` using HTML5 Canvas calls on Phaser `CanvasTexture`. If a PNG isn't in `public/assets/sprites/`, it defaults to the procedural drawing.
-
-Please consult the remote repository for the latest source changes.
+- **Strict Separation of Concerns**:
+  - `src/systems/`: Pure TypeScript logic (`BattleSystem`, `WaveSystem`, `RunSystem`). No Phaser imports. Headless testing ready.
+  - `src/scenes/`: Phaser rendering, animations, visual effects, and cameras.
+  - `src/ui/`: HTML UI overlay elements (`BattleUI`, `MapScene` overlays).
+  - `src/data/`: Declarative game database (`units.ts`, `enemies.ts`, `bosses.ts`, `events.ts`, etc.).
+- **Visual polish details**:
+  - Screen shakes on heavy events (`base-hit` shakes on damage; amount 999 shakes on phase transition; amount 0 shakes on boss ground slams).
+  - Clean state flow transitions: Main Menu -> Deploy -> Map -> Battle -> Choice Rewards -> Back to Map -> Campaign Completion.

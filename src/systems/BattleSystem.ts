@@ -5,7 +5,9 @@
 import { FIELD, BASES, ECONOMY, MORALE } from '../utils/constants';
 import { UNIT_INDEX } from '../data/units';
 import { ENEMY_INDEX } from '../data/enemies';
+import { BOSS_INDEX } from '../data/bosses';
 import { WaveSystem } from './WaveSystem';
+import type { NodeType, BattleMode } from '../types/RunTypes';
 
 export type Faction = 'ally' | 'enemy';
 
@@ -33,6 +35,7 @@ export interface Combatant {
   healPower?: number;
   healRadius?: number;
   maxTargets?: number;
+  aoeRadius?: number;
 
   // Estados
   slowRemaining?: number;
@@ -62,20 +65,56 @@ export class BattleSystem {
   activeUpgrades: string[] = [];
   outcome: BattleOutcome = 'ongoing';
   waveSys: WaveSystem;
+  nodeType: NodeType;
+  battleMode: BattleMode;
 
   private nextUid = 1;
   private incomeCarry = 0;
   pendingEvents: BattleEvent[] = [];
 
-  constructor(allyBaseHp = BASES.ALLY_HP, activeUpgrades: string[] = []) {
+  constructor(
+    allyBaseHp = BASES.ALLY_HP,
+    activeUpgrades: string[] = [],
+    nodeType: NodeType = 'battle',
+    battleMode: BattleMode = 'assault'
+  ) {
     this.allyBaseHp = allyBaseHp;
     this.allyBaseMaxHp = allyBaseHp;
-    this.enemyBaseHp = BASES.ENEMY_BASTION_HP;
-    this.enemyBaseMaxHp = BASES.ENEMY_BASTION_HP;
+    this.nodeType = nodeType;
+    this.battleMode = battleMode;
     this.supplies = ECONOMY.STARTING_SUPPLIES;
     this.morale = MORALE.START;
     this.activeUpgrades = activeUpgrades;
     this.waveSys = new WaveSystem(this);
+
+    if (nodeType === 'boss') {
+      const bossDef = BOSS_INDEX['general-eisenfaust'];
+      this.enemyBaseHp = bossDef.stats.maxHp;
+      this.enemyBaseMaxHp = bossDef.stats.maxHp;
+      // Spawn General Eisenfaust on lane 1 (center lane) at enemy spawn position
+      this.spawnBoss('general-eisenfaust', 1);
+    } else {
+      this.enemyBaseHp = BASES.ENEMY_BASTION_HP;
+      this.enemyBaseMaxHp = BASES.ENEMY_BASTION_HP;
+    }
+  }
+
+  spawnBoss(bossId: string, lane: number): Combatant | null {
+    const def = BOSS_INDEX[bossId];
+    if (!def) return null;
+    return this.addCombatant(def.id, 'enemy', FIELD.SPAWN_ENEMY_X, {
+      maxHp: def.stats.maxHp,
+      damage: def.stats.damage,
+      attackInterval: def.stats.attackInterval,
+      range: def.stats.range,
+      moveSpeed: def.stats.moveSpeed,
+      armor: def.stats.armor,
+      color: def.placeholder.color,
+      label: def.placeholder.label,
+      tags: def.tags || [],
+      traits: [],
+      aoeRadius: def.stats.aoeRadius,
+    }, lane);
   }
 
   canAfford(unitId: string): boolean {
@@ -196,8 +235,12 @@ export class BattleSystem {
     this.pendingEvents = [];
     const dt = dtMs / 1000;
 
-    // Actualizar Oleadas
-    this.waveSys.update(dtMs);
+    // Actualizar Oleadas o Fase de Jefe
+    if (this.nodeType === 'boss') {
+      this.updateBossPhases(dtMs);
+    } else {
+      this.waveSys.update(dtMs);
+    }
 
     // Economía
     this.incomeCarry += ECONOMY.INCOME_PER_SECOND * dt;
@@ -217,6 +260,9 @@ export class BattleSystem {
         if (c.burnTickTimer !== undefined) c.burnTickTimer -= dtMs;
         if (c.burnTickTimer !== undefined && c.burnTickTimer <= 0) {
            c.hp -= 3; // Burn damage
+           if (c.defId === 'general-eisenfaust') {
+             this.enemyBaseHp = Math.max(0, c.hp);
+           }
            if (c.hp <= 0) this.kill(c, c.faction === 'ally' ? 'enemy' : 'ally');
            c.burnTickTimer = 1000;
         }
@@ -247,9 +293,13 @@ export class BattleSystem {
         if (dist <= c.range) {
           if (c.attackCooldown <= 0) {
             this.dealDamage(c, target);
-            // AoE (Flamethrower)
-            if (c.traits.includes('burn') && c.maxTargets && c.maxTargets > 1) {
+            // AoE (Flamethrower / Boss ground slam)
+            if ((c.traits.includes('burn') && c.maxTargets && c.maxTargets > 1) || c.aoeRadius) {
               this.dealAoEDamage(c, target);
+              if (c.aoeRadius) {
+                // Ground slam shake
+                this.pendingEvents.push({ type: 'base-hit', faction: 'ally', amount: 0 });
+              }
             }
             c.attackCooldown = c.attackInterval;
           }
@@ -272,7 +322,7 @@ export class BattleSystem {
 
   private advance(c: Combatant, dt: number): void {
     const dir = c.faction === 'ally' ? 1 : -1;
-    const speed = (c.slowRemaining && c.slowRemaining > 0) ? c.moveSpeed * 0.85 : c.moveSpeed;
+    const speed = this.getModifiedMoveSpeed(c);
     c.x += dir * speed * dt;
   }
 
@@ -368,15 +418,60 @@ export class BattleSystem {
     }
   }
 
+  getModifiedDamage(attacker: Combatant): number {
+    let dmg = attacker.damage;
+    if (attacker.faction === 'enemy') {
+      // Check for Officer aura (+25% damage)
+      const hasOfficerAura = this.combatants.some(o => 
+        o.alive && o.faction === 'enemy' && o.defId === 'dead-officer' && o.uid !== attacker.uid && 
+        Math.abs(o.x - attacker.x) <= 140 && Math.abs(o.lane - attacker.lane) <= 1
+      );
+      if (hasOfficerAura) {
+        dmg = Math.round(dmg * 1.25);
+      }
+      // Check for Boss Phase 2 aura (+20% damage)
+      const hasBossAura = this.combatants.some(o => {
+        if (!o.alive || o.faction !== 'enemy' || o.defId !== 'general-eisenfaust' || o.uid === attacker.uid) return false;
+        const hpPct = o.hp / o.maxHp;
+        const inPhase2 = hpPct <= 0.70 && hpPct > 0.35;
+        if (!inPhase2) return false;
+        return Math.abs(o.x - attacker.x) <= 140 && Math.abs(o.lane - attacker.lane) <= 1;
+      });
+      if (hasBossAura) {
+        dmg = Math.round(dmg * 1.20);
+      }
+    }
+    return dmg;
+  }
+
+  getModifiedMoveSpeed(c: Combatant): number {
+    let speed = (c.slowRemaining && c.slowRemaining > 0) ? c.moveSpeed * 0.85 : c.moveSpeed;
+    if (c.faction === 'enemy') {
+      const hasOfficerAura = this.combatants.some(o => 
+        o.alive && o.faction === 'enemy' && o.defId === 'dead-officer' && o.uid !== c.uid && 
+        Math.abs(o.x - c.x) <= 140 && Math.abs(o.lane - c.lane) <= 1
+      );
+      if (hasOfficerAura) {
+        speed = speed * 1.15;
+      }
+    }
+    return speed;
+  }
+
   private dealDamage(attacker: Combatant, target: Combatant): void {
     if (attacker.defId === 'exploder') {
       this.detonate(attacker);
       return;
     }
 
-    const dmg = Math.max(1, attacker.damage - target.armor);
+    const baseDmg = this.getModifiedDamage(attacker);
+    const dmg = Math.max(1, baseDmg - target.armor);
     target.hp -= dmg;
     
+    if (target.defId === 'general-eisenfaust') {
+      this.enemyBaseHp = Math.max(0, target.hp);
+    }
+
     // Suppression Slow
     if (attacker.traits.includes('suppress')) {
       target.slowRemaining = 2000;
@@ -391,6 +486,23 @@ export class BattleSystem {
   }
 
   private dealAoEDamage(attacker: Combatant, primaryTarget: Combatant): void {
+    if (attacker.aoeRadius) {
+      const radius = attacker.aoeRadius;
+      for (const o of this.combatants) {
+        if (!o.alive || o.faction === attacker.faction || o.uid === primaryTarget.uid) continue;
+        if (Math.abs(o.lane - primaryTarget.lane) > 1) continue;
+        
+        const dist = Math.abs(o.x - primaryTarget.x);
+        if (dist <= radius) {
+          const baseDmg = this.getModifiedDamage(attacker);
+          const dmg = Math.max(1, baseDmg - o.armor);
+          o.hp -= dmg;
+          if (o.hp <= 0) this.kill(o, attacker.faction);
+        }
+      }
+      return;
+    }
+
     let hitCount = 1;
     const maxHits = attacker.maxTargets || 1;
     for (const o of this.combatants) {
@@ -415,6 +527,10 @@ export class BattleSystem {
     }
 
     c.alive = false;
+    if (c.defId === 'general-eisenfaust') {
+      this.enemyBaseHp = 0;
+    }
+
     this.pendingEvents.push({
       type: 'death',
       faction: c.faction,
@@ -474,6 +590,9 @@ export class BattleSystem {
         const dist = Math.abs(c.x - x);
         if (dist <= 140) {
           c.hp -= 80;
+          if (c.defId === 'general-eisenfaust') {
+            this.enemyBaseHp = Math.max(0, c.hp);
+          }
           if (c.hp <= 0) this.kill(c, 'ally');
         }
       }
@@ -499,5 +618,67 @@ export class BattleSystem {
 
   get enemyCount(): number {
     return this.combatants.filter((c) => c.alive && c.faction === 'enemy').length;
+  }
+
+  updateBossPhases(dtMs: number): void {
+    const boss = this.combatants.find(c => c.alive && c.defId === 'general-eisenfaust');
+    if (!boss) return;
+
+    const hpPct = boss.hp / boss.maxHp;
+    let newPhase = 0; // Phase 1
+    if (hpPct <= 0.35) {
+      newPhase = 2; // Phase 3
+    } else if (hpPct <= 0.70) {
+      newPhase = 1; // Phase 2
+    }
+
+    if ((this as any).currentBossPhase === undefined) {
+      (this as any).currentBossPhase = 0;
+    }
+
+    const prevPhase = (this as any).currentBossPhase;
+    if (newPhase !== prevPhase) {
+      (this as any).currentBossPhase = newPhase;
+      // Trigger a phase transition event
+      this.pendingEvents.push({
+        type: 'base-hit',
+        faction: 'enemy',
+        amount: 999 // Special amount code for phase transition
+      });
+
+      // Apply statOverrides
+      if (newPhase === 2) {
+        boss.moveSpeed = 16; // Speed up 30%
+      }
+    }
+
+    // Update Boss Abilities Cooldown
+    if ((boss as any).bossAbilityCooldown === undefined) {
+      (boss as any).bossAbilityCooldown = 4000; // Start with 4s cooldown
+    }
+
+    (boss as any).bossAbilityCooldown -= dtMs;
+    if ((boss as any).bossAbilityCooldown <= 0) {
+      // Cast boss summon ability!
+      if (newPhase === 0 || newPhase === 1) {
+        // Summons 3 Revenant Grunts
+        for (let i = 0; i < 3; i++) {
+          this.spawnEnemy('revenant-grunt');
+        }
+        (boss as any).bossAbilityCooldown = 8000; // 8s cooldown
+      } else if (newPhase === 2) {
+        // Summons 2 Runner Corpses
+        for (let i = 0; i < 2; i++) {
+          this.spawnEnemy('runner-corpse');
+        }
+        (boss as any).bossAbilityCooldown = 5000; // 5s cooldown
+      }
+      // Trigger a summon visual event
+      this.pendingEvents.push({
+        type: 'heal',
+        faction: 'enemy',
+        amount: 888 // Special amount code for boss summon
+      });
+    }
   }
 }
