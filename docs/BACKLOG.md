@@ -6,6 +6,23 @@ referencia de lo construido.
 
 ---
 
+## Landscape / camino a v1.0 (prioridad actual)
+
+- **L-1 · Landscape 16:9** — ✅ HECHO. Migración portrait→horizontal. `constants.ts`, `style.css`, `BattleScene`, `BattleUI`, `MapScene`, `ResultScene`, `BattleSystem`. Ver `LANDSCAPE_REFACTOR.md`.
+- **L-2 · Fondos 16:9 (M)** — dep L-1 — reemplazar `battlefield.png` y búnkers por arte horizontal nativo (prompts en `MAGNIFIC_PROMPTS.md`). Criterio: sin recorte/distorsión, lectura PvZ. Archivos: `public/assets/backgrounds/*`, `BootScene`.
+- **L-3 · Carriles ilustrados (S)** — dep L-2 — trincheras/líneas por carril para reforzar lectura de amenazas.
+- **L-4 · Sprites de unidades argentinas (L)** — dep L-2 — 12 unidades del brandbook (3/4 lateral), reemplazar `SpriteFactory`. Archivos: `public/assets/sprites/unit-*`, `BootScene`, `UnitRenderer`.
+- **L-5 · Sprites enemigos + bosses (L)** — dep L-2 — 9 enemigos + 3 bosses.
+- **L-6 · Animaciones (L)** — dep L-4/L-5 — idle/walk/attack/death; spritesheets o tween-based.
+- **L-7 · Audio + música (M)** — SFX y loops; `AudioSystem` + settings de volumen.
+- **L-8 · Tutorial (M)** — onboarding integrado en la primera batalla.
+- **L-9 · Variedad de rooms (L)** — tipos de sala con objetivos/modificadores/fondos distintos.
+- **L-10 · Event screen 2 columnas (S)** — dep L-2 — ilustración izquierda / texto-decisiones derecha.
+- **L-11 · Meta-progresión + guardado (M)** — desbloqueos persistentes entre runs.
+- **L-12 · Build mobile (M)** — Capacitor Android, lock landscape, safe-areas, key art/screenshots.
+
+---
+
 ## MVP 0.1 — hecho
 
 ### 1 · Setup Phaser/Vite/TS — `S` ✅

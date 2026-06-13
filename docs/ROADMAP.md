@@ -2,6 +2,22 @@
 
 Fases incrementales. Cada una termina en algo jugable y testeable.
 
+## Refactor L — Landscape 16:9 ✅ (Fase 1 entregada)
+
+**Objetivo:** migrar todo el juego de portrait a **horizontal/landscape** sin romper la lógica.
+**Alcance:** resolución lógica 960×540 (16:9); `LAYOUT` central; `#app-container` 16:9 con safe-areas; battlefield base-izquierda/búnker-derecha con **4 carriles**; HUD landscape (base/moral/búnker arriba, cartas+habilidades abajo); mapa roguelite horizontal; ResultScene re-maquetado.
+**Criterios de salida:** corre en horizontal de punta a punta; `tsc` limpio; `vite build` ok; verificado en `localhost`. **Cumplido.** Ver `LANDSCAPE_REFACTOR.md`.
+
+## Camino a v1.0 (etapas hacia producto Play Store)
+
+1. **Arte landscape** — reemplazar fondos/sprites placeholder con assets 16:9 (ver `MAGNIFIC_PROMPTS.md`); trincheras/carriles ilustrados.
+2. **Animaciones + VFX** — idle/walk/attack/death por unidad y enemigo; telegraphs de boss.
+3. **Audio + música** — SFX de combate/UI y loops (menú/combate/boss/victoria/derrota).
+4. **Tutorial + onboarding** — enseñar despliegue, carriles, recursos, moral, run, reliquias.
+5. **Contenido + variedad de rooms** — tipos de sala (emboscada, defensa, rescate, laboratorio, antena, tienda, mini-boss); modificadores; más enemigos/bosses/reliquias enchufados.
+6. **Progresión meta + guardado** — desbloqueos persistentes, recompensas post-run.
+7. **Balance + performance + Play Store** — pasada de balance, optimización mobile, build Capacitor, key art/screenshots.
+
 ## MVP 0.1 — Combate mínimo ✅ (entregado)
 
 **Objetivo:** una batalla assault jugable de punta a punta.
