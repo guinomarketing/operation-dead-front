@@ -83,6 +83,104 @@ body {
   flex-direction: column;
 }
 
+/* ─────────────────────────────────────────────────────────
+   HUD militar premium (placas metálicas, remaches, barras)
+   ───────────────────────────────────────────────────────── */
+.mil-panel {
+  position: relative;
+  border: 2px solid #07090d;
+  border-radius: 6px;
+  background-image:
+    radial-gradient(circle at 8px 8px, rgba(150,165,120,0.5) 0 2px, transparent 2.6px),
+    radial-gradient(circle at calc(100% - 8px) 8px, rgba(150,165,120,0.5) 0 2px, transparent 2.6px),
+    radial-gradient(circle at 8px calc(100% - 8px), rgba(150,165,120,0.5) 0 2px, transparent 2.6px),
+    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(150,165,120,0.5) 0 2px, transparent 2.6px),
+    linear-gradient(180deg, #313a29 0%, #1c2316 58%, #11160d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    inset 0 0 0 1px rgba(120,140,90,0.16),
+    0 3px 7px rgba(0,0,0,0.65);
+}
+
+.mil-bar {
+  position: relative;
+  height: 16px;
+  border: 2px solid #07090d;
+  border-radius: 3px;
+  background: #0a0c08;
+  box-shadow: inset 0 2px 3px rgba(0,0,0,0.8);
+  overflow: hidden;
+}
+.mil-bar > .fill {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  transition: width 0.28s ease;
+}
+.mil-bar > .fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, rgba(0,0,0,0.28) 0 1px, transparent 1px 13px);
+  pointer-events: none;
+}
+.mil-bar > .fill::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 50% 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0));
+  pointer-events: none;
+}
+.mil-bar > .val {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.95);
+}
+.fill-ally  { background: linear-gradient(180deg, #6db3ff 0%, #2f6fd0 55%, #1c4d9c 100%); }
+.fill-enemy { background: linear-gradient(180deg, #ff6b5a 0%, #c0392b 55%, #7c1f17 100%); }
+
+/* Medallón circular de moral */
+.mil-medallion {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 50% 38%, #2d3626 0%, #161c11 75%);
+  border: 3px solid #07090d;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 5px rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.mil-medallion .ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+}
+
+/* Chip de recurso (ícono + número) */
+.res-chip { display: flex; align-items: center; gap: 5px; }
+.res-chip img { width: 26px; height: 26px; image-rendering: auto; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.7)); }
+.res-chip .num { font-family: var(--font-title); font-size: 19px; color: var(--primary); text-shadow: 0 1px 2px #000; }
+
+/* Pips de oleada */
+.wave-pips { display: flex; gap: 4px; align-items: center; }
+.wave-pips .pip { width: 13px; height: 13px; border-radius: 50%; background: #0c0f08; border: 1px solid #000; box-shadow: inset 0 1px 1px rgba(0,0,0,0.8); }
+.wave-pips .pip.on  { background: radial-gradient(circle at 40% 35%, #ffd36b, #d4a843 60%, #6a4f12); box-shadow: 0 0 5px rgba(212,168,67,0.8); }
+.wave-pips .pip.boss { background: radial-gradient(circle at 40% 35%, #ff7a6a, #c0392b 60%, #5a1410); box-shadow: 0 0 6px rgba(192,57,43,0.9); }
+
 /* Estilo Militar Premium (Reemplaza al Glassmorphism) */
 .glass-panel {
   background: var(--panel-bg);

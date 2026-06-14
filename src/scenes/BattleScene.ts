@@ -821,7 +821,10 @@ export class BattleScene extends Phaser.Scene {
       cooldowns: this.cooldowns,
       morale: this.sim.morale,
       roster,
-      deployedSoldierIds: this.deployedSoldierIds
+      deployedSoldierIds: this.deployedSoldierIds,
+      wave: this.sim.nodeType === 'boss'
+        ? undefined
+        : { current: this.sim.waveSys.state.currentWave, total: this.sim.waveSys.state.totalWaves },
     });
   }
 
