@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { RunSystem } from '../systems/RunSystem';
+import { Audio2 } from '../systems/AudioSystem';
 
 export class MainMenuScene extends Phaser.Scene {
   private uiContainer!: HTMLElement | null;
@@ -27,6 +28,10 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Fade in sutil
     this.cameras.main.fadeIn(800, 0, 0, 0);
+
+    // Desbloquear audio + música de menú al primer gesto del usuario
+    const unlockOnce = () => { Audio2.unlock(); Audio2.playMusic('menu'); };
+    document.addEventListener('pointerdown', unlockOnce, { once: true });
 
     // Crear Interfaz HTML
     this.createHTMLMenu();
@@ -61,7 +66,7 @@ export class MainMenuScene extends Phaser.Scene {
     startBtn.style.padding = '16px 48px';
     startBtn.style.fontSize = '1.8rem';
     
-    startBtn.onclick = () => this.startGame(menuDiv);
+    startBtn.onclick = () => { Audio2.unlock(); Audio2.play('uiClick'); this.startGame(menuDiv); };
 
     menuDiv.appendChild(title);
     menuDiv.appendChild(subtitle);

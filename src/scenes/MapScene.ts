@@ -6,6 +6,7 @@ import type { RunState, RunMapDef, RunNodeDef } from '../types/RunTypes';
 import { EVENTS } from '../data/events';
 import { UPGRADES } from '../data/upgrades';
 import { UNIT_INDEX } from '../data/units';
+import { Audio2 } from '../systems/AudioSystem';
 
 export class MapScene extends Phaser.Scene {
   private runState!: RunState;
@@ -55,6 +56,8 @@ export class MapScene extends Phaser.Scene {
 
     // Fade in
     this.cameras.main.fadeIn(600, 0, 0, 0);
+    Audio2.unlock();
+    Audio2.playMusic('menu');
   }
 
   private drawBackground(): void {
@@ -235,6 +238,7 @@ export class MapScene extends Phaser.Scene {
   }
 
   private selectNode(node: RunNodeDef): void {
+    Audio2.play('uiClick');
     // Bloquear interacción
     this.input.enabled = false;
 

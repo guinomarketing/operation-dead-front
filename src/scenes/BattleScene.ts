@@ -12,6 +12,7 @@ import { ABILITY_INDEX } from '../data/abilities';
 import { SpriteFactory } from '../rendering/SpriteFactory';
 import { UnitRenderer } from '../rendering/UnitRenderer';
 import { BattleUI } from '../ui/BattleUI';
+import { Audio2 } from '../systems/AudioSystem';
 
 // ── Layout constants ──────────────────────────────────────
 
@@ -100,6 +101,10 @@ export class BattleScene extends Phaser.Scene {
 
     // Camera fade in
     this.cameras.main.fadeIn(600, 0, 0, 0);
+
+    // Música de combate
+    Audio2.unlock();
+    Audio2.playMusic('combat');
 
     // ── Dev demo (solo pruebas): ?demo=1 despliega un escuadrón inicial ──
     if (new URLSearchParams(window.location.search).get('demo') === '1') {
@@ -258,6 +263,7 @@ export class BattleScene extends Phaser.Scene {
   // ═══════════════════════════════════════════════════════════
 
   private selectUnit(unitId: string): void {
+    Audio2.play('uiClick');
     const cd = this.cooldowns.get(unitId) ?? 0;
     if (cd > 0) return;
     if (!this.sim.canAfford(unitId)) {
@@ -284,6 +290,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private selectAbility(abilityId: string): void {
+    Audio2.play('uiClick');
     const cd = this.cooldowns.get(abilityId) ?? 0;
     if (cd > 0) return;
     const def = ABILITY_INDEX[abilityId];
@@ -351,6 +358,7 @@ export class BattleScene extends Phaser.Scene {
       this.cooldowns.set(unitId, def.deployCooldown);
       this.spawnUnit(c);
       this.spawnDeployPuff(FIELD.SPAWN_ALLY_X, FIELD.LANES_Y[lane]);
+      Audio2.play('deploy');
     }
   }
 
@@ -490,6 +498,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private triggerAirstrikeExplosion(x: number, y: number): void {
+    Audio2.play('explosion');
     this.cameras.main.shake(300, 0.015);
     
     const flash = this.add.circle(x, y, 140, 0xffaa44, 0.8);
@@ -719,9 +728,11 @@ export class BattleScene extends Phaser.Scene {
             this.triggerExploderExplosion(ex, ey);
           } else {
             this.spawnGreenSmoke(ex, ey);
+            Audio2.play('enemyDeath');
           }
         } else {
           this.spawnBloodSplat(ex, ey);
+          Audio2.play('allyDeath');
           if (ev.uid && this.uidToSoldierId.has(ev.uid)) {
             const soldierId = this.uidToSoldierId.get(ev.uid);
             const runState = this.game.registry.get('runState');
@@ -769,6 +780,7 @@ export class BattleScene extends Phaser.Scene {
           const flash = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.hpBad, 0.08);
           flash.setDepth(850);
           this.tweens.add({ targets: flash, alpha: 0, duration: 300, onComplete: () => flash.destroy() });
+          if (ev.amount && ev.amount > 0) Audio2.play('baseHit');
         } else if (ev.faction === 'enemy') {
           this.cameras.main.shake(80, 0.003);
         }
@@ -779,6 +791,8 @@ export class BattleScene extends Phaser.Scene {
           this.spawnDeployPuff(FIELD.SPAWN_ENEMY_X, FIELD.LANES_Y[0]);
           this.spawnDeployPuff(FIELD.SPAWN_ENEMY_X, FIELD.LANES_Y[1]);
           this.spawnDeployPuff(FIELD.SPAWN_ENEMY_X, FIELD.LANES_Y[2]);
+        } else if (ev.faction === 'ally') {
+          Audio2.play('heal');
         }
       }
     }
@@ -794,6 +808,7 @@ export class BattleScene extends Phaser.Scene {
           if (c.range > 30) {
             const y = FIELD.LANES_Y[c.lane] - 34;
             this.spawnMuzzleFlash(c.x, y, c.faction === 'ally');
+            if (c.faction === 'ally') Audio2.play('shoot');
           }
         }
       }
@@ -829,6 +844,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private endBattle(outcome: 'won' | 'lost'): void {
+    Audio2.play(outcome === 'won' ? 'victory' : 'defeat');
     // Persist HP and Morale back to RunState
     const runState = this.game.registry.get('runState');
     if (runState) {
@@ -884,6 +900,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private triggerExploderExplosion(x: number, y: number): void {
+    Audio2.play('explosion');
     this.cameras.main.shake(150, 0.006);
     
     // Toxic flash
