@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { UNIT_INDEX } from '../data/units';
-import { DEPLOYABLE } from '../scenes/BattleScene';
 
 const UI = '/assets/ui';
 
@@ -35,7 +34,8 @@ export class BattleUI {
     private scene: Phaser.Scene,
     private onSelectCard: (unitId: string) => void,
     private onSelectAbility: (abilityId: string) => void,
-    private nodeType: string = 'battle'
+    private nodeType: string = 'battle',
+    private deployable: string[] = ['rifleman']
   ) {
     this.container = document.getElementById('ui-layer')!;
     this.build();
@@ -137,8 +137,9 @@ export class BattleUI {
     Object.assign(deployRow.style, { display: 'flex', gap: '6px', flex: '1 1 auto', minWidth: '0', overflowX: 'auto', overflowY: 'hidden', paddingBottom: '4px', pointerEvents: 'auto' } as CSSStyleDeclaration);
     (deployRow.style as any).scrollbarWidth = 'thin';
 
-    for (const unitId of DEPLOYABLE) {
+    for (const unitId of this.deployable) {
       const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
+      if (!def) continue;
       this.cards[unitId] = this.buildCard(unitId, def, deployRow);
     }
 

@@ -39,6 +39,11 @@ export class BootScene extends Phaser.Scene {
     const jump = new URLSearchParams(window.location.search).get('scene');
     if (jump) {
       const runState = RunSystem.startNewRun();
+      // Demo: desbloquear y enrolar todas las clases (sin tocar el guardado real).
+      const all = ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower',
+        'bombero', 'cientifica', 'veterano', 'gaucho', 'colectivero', 'electricista'];
+      runState.unlockedUnitIds = all;
+      for (const id of all) if (!runState.roster.some((s) => s.unitId === id)) runState.roster.push(RunSystem.generateRandomSoldier(id));
       const mapDef = RunSystem.generateMap(runState.seed);
       this.game.registry.set('runState', runState);
       this.game.registry.set('mapDef', mapDef);

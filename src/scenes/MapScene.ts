@@ -632,8 +632,8 @@ export class MapScene extends Phaser.Scene {
     });
     itemsDiv.appendChild(healRow);
 
-    // Añadir opción de reclutar soldado aleatorio por 1 Intel
-    const recruitClasses = ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower'];
+    // Añadir opción de reclutar soldado aleatorio por 1 Intel (clases desbloqueadas)
+    const recruitClasses = (this.runState.unlockedUnitIds && this.runState.unlockedUnitIds.length) ? this.runState.unlockedUnitIds : ['rifleman'];
     const randomClass = recruitClasses[Math.floor(Math.random() * recruitClasses.length)];
     const newRecruit = RunSystem.generateRandomSoldier(randomClass);
     const recruitRow = this.createShopItemRow(
@@ -782,7 +782,7 @@ export class MapScene extends Phaser.Scene {
     recruitBtn.className = 'btn-primary';
     recruitBtn.style.flex = '1';
     recruitBtn.style.height = '80px';
-    const recruitClasses = ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower'];
+    const recruitClasses = (this.runState.unlockedUnitIds && this.runState.unlockedUnitIds.length) ? this.runState.unlockedUnitIds : ['rifleman'];
     const tempRecruit = RunSystem.generateRandomSoldier(recruitClasses[Math.floor(Math.random() * recruitClasses.length)]);
     recruitBtn.innerHTML = `<span style="font-size:18px;">🎖 RECLUTAR</span><br/><span style="font-size:11px; color:#222; font-weight:bold;">${tempRecruit.name} (${UNIT_INDEX[tempRecruit.unitId].name})</span>`;
     recruitBtn.onclick = () => {

@@ -1,5 +1,6 @@
 import type { RunState, RunMapDef, RunNodeDef, NodeType, RunEffect, RosterSoldier } from '../types/RunTypes';
 import { BASES, MORALE } from '../utils/constants';
+import { MetaProgression } from './MetaProgression';
 
 const NOMBRES = ['Juan', 'Esteban', 'Santiago', 'Ignacio', 'Facundo', 'Lautaro', 'Bautista', 'Mateo', 'Rodrigo', 'Lucas', 'Enzo', 'Lionel', 'Beto', 'Cacho', 'Tito', 'Gato', 'Charly', 'Diego', 'Lucho', 'Felipe'];
 const APELLIDOS = ['Pérez', 'Rodríguez', 'González', 'Gómez', 'Fernández', 'López', 'Martínez', 'Álvarez', 'Romero', 'Sosa', 'Benítez', 'Giménez', 'Medina', 'Herrera', 'Castro', 'Paz', 'Ortega', 'Rojas', 'Díaz', 'Silva'];
@@ -28,23 +29,17 @@ export class RunSystem {
    */
   static startNewRun(operationId: string = 'first-light', commanderId: string = 'miller'): RunState {
     const seed = Math.random().toString(36).substring(2, 10);
+
+    // Plantel inicial: 3 Conscriptos + 1 de cada clase YA desbloqueada (meta-progreso).
+    const unlocked = MetaProgression.getUnlocked();
     const roster: RosterSoldier[] = [
       RunSystem.generateRandomSoldier('rifleman'),
       RunSystem.generateRandomSoldier('rifleman'),
       RunSystem.generateRandomSoldier('rifleman'),
-      RunSystem.generateRandomSoldier('heavy-gunner'),
-      RunSystem.generateRandomSoldier('heavy-gunner'),
-      RunSystem.generateRandomSoldier('medic'),
-      RunSystem.generateRandomSoldier('engineer'),
-      RunSystem.generateRandomSoldier('sniper'),
-      RunSystem.generateRandomSoldier('flamethrower'),
-      RunSystem.generateRandomSoldier('bombero'),
-      RunSystem.generateRandomSoldier('cientifica'),
-      RunSystem.generateRandomSoldier('veterano'),
-      RunSystem.generateRandomSoldier('gaucho'),
-      RunSystem.generateRandomSoldier('colectivero'),
-      RunSystem.generateRandomSoldier('electricista'),
     ];
+    for (const id of unlocked) {
+      if (id !== 'rifleman') roster.push(RunSystem.generateRandomSoldier(id));
+    }
 
     return {
       operationId,
@@ -56,7 +51,7 @@ export class RunSystem {
       baseMaxHp: BASES.ALLY_HP,
       morale: MORALE.START,
       suppliesBonusNextBattle: 0,
-      unlockedUnitIds: ['rifleman', 'heavy-gunner', 'medic', 'engineer', 'sniper', 'flamethrower', 'bombero', 'cientifica', 'veterano', 'gaucho', 'colectivero', 'electricista'],
+      unlockedUnitIds: unlocked,
       equippedAbilityIds: ['airstrike', 'medkit'],
       upgradeIds: [],
       relicIds: [],

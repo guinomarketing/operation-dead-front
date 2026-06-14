@@ -13,6 +13,7 @@ import { SpriteFactory } from '../rendering/SpriteFactory';
 import { UnitRenderer } from '../rendering/UnitRenderer';
 import { BattleUI } from '../ui/BattleUI';
 import { Audio2 } from '../systems/AudioSystem';
+import { MetaProgression } from '../systems/MetaProgression';
 
 // ── Layout constants ──────────────────────────────────────
 
@@ -86,11 +87,15 @@ export class BattleScene extends Phaser.Scene {
     this.drawBattlefieldBackground();
     this.drawBases();
     this.startAmbientParticles();
+    const deployable: string[] = (runState && runState.unlockedUnitIds && runState.unlockedUnitIds.length)
+      ? runState.unlockedUnitIds
+      : [...DEPLOYABLE];
     this.ui = new BattleUI(
       this,
       (unitId) => this.selectUnit(unitId),
       (abilityId) => this.selectAbility(abilityId),
-      nodeType
+      nodeType,
+      deployable
     );
     this.drawVignette();
 
@@ -107,8 +112,14 @@ export class BattleScene extends Phaser.Scene {
     Audio2.playMusic('combat');
 
     // ── Dev demo (solo pruebas): ?demo=1 despliega un escuadrón inicial ──
-    if (new URLSearchParams(window.location.search).get('demo') === '1') {
+    const isDemo = new URLSearchParams(window.location.search).get('demo') === '1';
+    if (isDemo) {
       this.time.delayedCall(300, () => this.devDemoDeploy());
+    }
+
+    // ── Tutorial: solo en el primer combate normal, una vez ──
+    if (!isDemo && nodeType === 'battle' && !MetaProgression.isTutorialDone()) {
+      this.time.delayedCall(650, () => this.showTutorial());
     }
 
     if (nodeType === 'boss') {
@@ -348,6 +359,54 @@ export class BattleScene extends Phaser.Scene {
       this.spawnDeployPuff(FIELD.SPAWN_ALLY_X, FIELD.LANES_Y[lane]);
       Audio2.play('deploy');
     }
+  }
+
+  /** Tutorial de onboarding: secuencia de globos que se tocan para avanzar. */
+  private showTutorial(): void {
+    const layer = document.getElementById('ui-layer');
+    if (!layer) return;
+    const steps = [
+      '🪖 DESPLEGAR — Tocá una carta de unidad (abajo) y después un carril del campo para soltar a tu soldado. Cada unidad cuesta SUMINISTROS (se generan solos con el tiempo).',
+      '⚔️ COMBATE — Tus unidades avanzan y atacan solas, formando el frente. Empujá la línea hasta destruir el BÚNKER ENEMIGO (derecha).',
+      '🇦🇷 NO CAIGAS — Arriba ves la vida de tu BASE (izquierda), la MORAL (centro) y el búnker enemigo (derecha). Si tu base o tu moral llegan a 0, perdés.',
+      '💥 HABILIDADES — Abajo a la derecha tenés Ataque Aéreo y Botiquín. Usalas en el momento justo para dar vuelta una oleada.',
+      '★ PROGRESO — Ganá medallas para desbloquear nuevas unidades argentinas entre partidas. ¡Aguante la Patagonia, a pelear!',
+    ];
+    let i = 0;
+    const wrap = document.createElement('div');
+    Object.assign(wrap.style, {
+      position: 'absolute', inset: '0', zIndex: '250', pointerEvents: 'auto',
+      background: 'rgba(5,7,5,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+    } as Partial<CSSStyleDeclaration> as CSSStyleDeclaration);
+
+    const panel = document.createElement('div');
+    panel.className = 'mil-panel';
+    Object.assign(panel.style, { maxWidth: '440px', width: '82%', padding: '18px 20px', textAlign: 'center', boxSizing: 'border-box' } as CSSStyleDeclaration);
+    const title = document.createElement('div');
+    title.innerText = 'CÓMO SE JUEGA';
+    Object.assign(title.style, { fontFamily: 'var(--font-title)', fontSize: '16px', color: 'var(--primary)', marginBottom: '8px', letterSpacing: '1px' } as CSSStyleDeclaration);
+    const body = document.createElement('div');
+    Object.assign(body.style, { fontSize: '14px', color: '#e5e7eb', lineHeight: '1.5', minHeight: '84px' } as CSSStyleDeclaration);
+    const dots = document.createElement('div');
+    Object.assign(dots.style, { marginTop: '8px', fontSize: '12px', color: 'var(--primary)' } as CSSStyleDeclaration);
+    const hint = document.createElement('div');
+    Object.assign(hint.style, { marginTop: '6px', fontSize: '11px', color: '#9aa08c' } as CSSStyleDeclaration);
+    panel.appendChild(title); panel.appendChild(body); panel.appendChild(dots); panel.appendChild(hint);
+    wrap.appendChild(panel);
+
+    const renderStep = () => {
+      body.innerText = steps[i];
+      dots.innerText = steps.map((_, k) => (k === i ? '●' : '○')).join(' ');
+      hint.innerText = i < steps.length - 1 ? 'Tocá para continuar  ›' : 'Tocá para empezar  ⚔';
+    };
+    wrap.onclick = () => {
+      Audio2.play('uiClick');
+      i++;
+      if (i >= steps.length) { MetaProgression.setTutorialDone(); wrap.remove(); return; }
+      renderStep();
+    };
+    renderStep();
+    layer.appendChild(wrap);
   }
 
   /** Dev-only: despliega un escuadrón inicial repartido en carriles para capturas. */

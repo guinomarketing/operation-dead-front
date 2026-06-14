@@ -5,6 +5,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { COLORS, hex, FONTS } from '../ui/colors';
 import { UPGRADE_INDEX } from '../data/upgrades';
+import { MetaProgression } from '../systems/MetaProgression';
 
 interface ResultData {
   outcome: 'won' | 'lost';
@@ -221,9 +222,10 @@ export class ResultScene extends Phaser.Scene {
           if (!runState.upgradeIds.includes(upId)) {
             runState.upgradeIds.push(upId);
           }
-          // Reward Intel & Medals on victory
+          // Reward Intel & Medals on victory (medallas también al banco persistente)
           runState.intelEarned += 1;
           runState.medalsEarned += 1;
+          MetaProgression.addMedals(1);
           // Mark current node as visited
           if (runState.currentNodeId && !runState.visitedNodeIds.includes(runState.currentNodeId)) {
             runState.visitedNodeIds.push(runState.currentNodeId);
@@ -282,6 +284,8 @@ export class ResultScene extends Phaser.Scene {
       const runState = this.game.registry.get('runState');
       if (runState) {
         runState.medalsEarned += 10; // 10 medals for run completion
+        MetaProgression.addMedals(10);
+        MetaProgression.markRunWon();
         // Also mark current node as visited
         if (runState.currentNodeId && !runState.visitedNodeIds.includes(runState.currentNodeId)) {
           runState.visitedNodeIds.push(runState.currentNodeId);
