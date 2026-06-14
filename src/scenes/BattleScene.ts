@@ -161,24 +161,12 @@ export class BattleScene extends Phaser.Scene {
     const cover = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
     bg.setScale(cover);
 
-    // Oscurecer apenas la zona de combate para que las unidades resalten (lectura PvZ),
-    // sin tapar la ilustración del fondo.
-    const dim = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0a0d0a, 0.16);
+    // Oscurecer apenas la zona de combate para que las unidades resalten,
+    // sin tapar la ilustración del fondo. (Sin líneas de carril fijas: el suelo
+    // plano + el escalado por profundidad ya comunican los carriles; el resaltado
+    // de carril aparece solo al desplegar.)
+    const dim = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0a0d0a, 0.12);
     dim.setDepth(-95);
-
-    // Guías de carril MUY sutiles sobre el terreno ilustrado (claridad de carriles).
-    const pathG = this.add.graphics();
-    pathG.setDepth(-90);
-    for (const y of FIELD.LANES_Y) {
-      // banda de pisada apenas perceptible
-      pathG.fillStyle(0x000000, 0.10);
-      pathG.fillRect(0, y - 16, GAME_WIDTH, 32);
-      // líneas divisorias finas
-      pathG.fillStyle(0xffffff, 0.025);
-      pathG.fillRect(0, y - 17, GAME_WIDTH, 1);
-      pathG.fillStyle(0x000000, 0.12);
-      pathG.fillRect(0, y + 16, GAME_WIDTH, 1);
-    }
   }
 
   // ═══════════════════════════════════════════════════════════

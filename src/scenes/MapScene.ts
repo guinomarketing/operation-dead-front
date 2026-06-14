@@ -19,6 +19,10 @@ export class MapScene extends Phaser.Scene {
     super('Map');
   }
 
+  preload(): void {
+    if (!this.textures.exists('mapbg')) this.load.image('mapbg', '/assets/backgrounds/keyart-main.jpg');
+  }
+
   create(): void {
     // Leer estado de la run del registry
     this.runState = this.game.registry.get('runState');
@@ -61,29 +65,38 @@ export class MapScene extends Phaser.Scene {
   }
 
   private drawBackground(): void {
-    // Fondo de color plano oscuro militar
-    this.cameras.main.setBackgroundColor('#0d110d');
+    this.cameras.main.setBackgroundColor('#0a0d0a');
 
-    // Rejilla de blueprint
+    // Key art de fondo, cubriendo y muy oscurecido (atmósfera de mapa de campaña)
+    if (this.textures.exists('mapbg')) {
+      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'mapbg');
+      const cover = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
+      bg.setScale(cover);
+      bg.setDepth(-100);
+      const dark = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x070b09, 0.74);
+      dark.setDepth(-95);
+    }
+
+    // Rejilla de blueprint sutil encima
     const grid = this.add.graphics();
-    grid.lineStyle(1, 0x1f2e1f, 0.4);
-    
-    // Líneas verticales
-    for (let x = 0; x < GAME_WIDTH; x += 40) {
-      grid.lineBetween(x, 0, x, GAME_HEIGHT);
-    }
-    // Líneas horizontales
-    for (let y = 0; y < GAME_HEIGHT; y += 40) {
-      grid.lineBetween(0, y, GAME_WIDTH, y);
+    grid.setDepth(-90);
+    grid.lineStyle(1, 0x2f4a33, 0.18);
+    for (let x = 0; x < GAME_WIDTH; x += 48) grid.lineBetween(x, 0, x, GAME_HEIGHT);
+    for (let y = 0; y < GAME_HEIGHT; y += 48) grid.lineBetween(0, y, GAME_WIDTH, y);
+
+    // Viñeta
+    const v = this.add.graphics(); v.setDepth(-88);
+    for (let i = 0; i < 6; i++) {
+      v.fillStyle(0x000000, 0.16 - i * 0.02);
+      v.fillRect(0, 0, GAME_WIDTH, 36 - i * 5);
+      v.fillRect(0, GAME_HEIGHT - 36 + i * 5, GAME_WIDTH, 36 - i * 5);
     }
 
-    // Líneas diagonales decorativas en las esquinas
-    const dec = this.add.graphics();
-    dec.lineStyle(2, 0x3a4a3a, 0.25);
-    dec.lineBetween(0, 80, 80, 0);
-    dec.lineBetween(GAME_WIDTH - 80, 0, GAME_WIDTH, 80);
-    dec.lineBetween(0, GAME_HEIGHT - 80, 80, GAME_HEIGHT);
-    dec.lineBetween(GAME_WIDTH - 80, GAME_HEIGHT, GAME_WIDTH, GAME_HEIGHT - 80);
+    // Título de ruta
+    this.add.text(GAME_WIDTH / 2, 108, 'RUTA DEL BÚNKER', {
+      fontFamily: FONTS.title, fontSize: '22px', color: hex(COLORS.gold),
+      stroke: '#000', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(5).setAlpha(0.85);
   }
 
   /**
@@ -149,48 +162,67 @@ export class MapScene extends Phaser.Scene {
 
       // Color base del nodo
       let color: number = COLORS.metalDark;
-      let strokeColor: number = COLORS.metalFrame;
       let strokeWidth = 2;
       let alpha = 0.9;
       let size = 20;
 
       if (isCurrent) {
         color = COLORS.bgField;
-        strokeColor = COLORS.gold;
         strokeWidth = 3;
         size = 23;
       } else if (isSelectable) {
         color = COLORS.panel;
-        strokeColor = COLORS.serum;
         strokeWidth = 2.5;
         size = 22;
       } else if (isVisited) {
         color = 0x111611;
-        strokeColor = COLORS.inkDim;
         alpha = 0.6;
       }
 
-      // Dibujar círculo del nodo
-      this.g.fillStyle(color, alpha);
-      this.g.beginPath();
-      this.g.arc(x, y, size, 0, Math.PI * 2);
-      this.g.fill();
-      this.g.lineStyle(strokeWidth, strokeColor, alpha);
-      this.g.strokePath();
+      // Acento de color por tipo de nodo
+      const typeAccent: number =
+        n.type === 'boss' ? 0xc0392b :
+        n.type === 'elite' ? 0xe05a2a :
+        n.type === 'event' ? COLORS.gold :
+        n.type === 'supply' ? 0x4a90d9 :
+        n.type === 'hq' ? 0x5fbf5a :
+        0x8aa0b0;
+      if (n.type === 'boss') size = 26;
 
-      // Añadir icono textual descriptivo
+      // Halo para nodos seleccionables (anillo pulsante)
+      if (isSelectable) {
+        const halo = this.add.graphics().setDepth(11);
+        halo.fillStyle(typeAccent, 0.18);
+        halo.fillCircle(x, y, size + 12);
+        this.tweens.add({ targets: halo, alpha: { from: 0.4, to: 1 }, scale: { from: 0.92, to: 1.06 }, duration: 760, yoyo: true, repeat: -1 });
+      }
+
+      // Disco metálico con bisel
+      this.g.fillStyle(0x05070a, isCurrent || isSelectable ? 0.95 : alpha); // sombra/base
+      this.g.fillCircle(x, y, size + 2);
+      this.g.fillStyle(color, alpha);
+      this.g.fillCircle(x, y, size);
+      // bisel superior
+      this.g.fillStyle(0xffffff, 0.10);
+      this.g.beginPath(); this.g.arc(x, y - size * 0.18, size * 0.8, Math.PI, Math.PI * 2); this.g.fillPath();
+      // aro de color por tipo
+      this.g.lineStyle(strokeWidth + (isSelectable ? 1 : 0), typeAccent, alpha);
+      this.g.strokeCircle(x, y, size);
+
+      // Icono
       let icon = '⚔';
       if (n.type === 'elite') icon = '☠';
       else if (n.type === 'event') icon = '?';
-      else if (n.type === 'supply') icon = '⬢';
-      else if (n.type === 'hq') icon = '✚';
-      else if (n.type === 'boss') icon = '⭐';
+      else if (n.type === 'supply') icon = '✚';
+      else if (n.type === 'hq') icon = '⛺';
+      else if (n.type === 'boss') icon = '☠';
 
       const label = this.add.text(x, y, icon, {
         fontFamily: FONTS.ui,
-        fontSize: n.type === 'boss' ? '18px' : '14px',
-        color: hex(isSelectable ? COLORS.serum : (isCurrent ? COLORS.gold : (isVisited ? COLORS.inkDim : COLORS.ink))),
-        fontStyle: 'bold'
+        fontSize: n.type === 'boss' ? '22px' : '15px',
+        color: hex(isVisited ? COLORS.inkDim : (isSelectable || isCurrent ? COLORS.textWhite : COLORS.ink)),
+        fontStyle: 'bold',
+        stroke: '#000', strokeThickness: 3,
       }).setOrigin(0.5).setDepth(15);
 
       // Si es seleccionable, hacerlo interactivo
