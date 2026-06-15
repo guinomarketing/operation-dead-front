@@ -296,8 +296,7 @@ export class BattleScene extends Phaser.Scene {
     } else {
       this.selectedUnitId = unitId;
       this.activeAbilityId = null;
-      this.ui.setSelectedUnit(unitId);
-      this.ui.setSelectedAbility(null);
+      this.ui.setSelectedUnit(unitId); // ya limpia visuals de habilidades + activa el catcher
     }
   }
 
@@ -317,8 +316,7 @@ export class BattleScene extends Phaser.Scene {
     } else {
       this.activeAbilityId = abilityId;
       this.selectedUnitId = null;
-      this.ui.setSelectedAbility(abilityId);
-      this.ui.setSelectedUnit(null);
+      this.ui.setSelectedAbility(abilityId); // ya limpia visuals de cartas + activa el catcher
     }
   }
 

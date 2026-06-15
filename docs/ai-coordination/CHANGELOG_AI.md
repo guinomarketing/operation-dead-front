@@ -5,6 +5,15 @@ Formato por entrada: Fecha — Herramienta · Objetivo · Archivos · Cambios ·
 
 ---
 
+## 2026-06-15 — Claude Code (P0 fix)
+- **Objetivo:** Resolver el bug P0 de despliegue en carriles inferiores.
+- **Archivos:** `src/ui/BattleUI.ts` (DOM deploy-catcher + toggle en setSelectedUnit/Ability), `src/scenes/BattleScene.ts` (pasa onFieldTap; quita llamadas cruzadas a setters que desactivaban el catcher), `src/utils/constants.ts` (`LANES_Y=[300,336,372,408]`).
+- **Cambios:** toque de despliegue/habilidad confiable vía DOM, independiente del stacking canvas/DOM.
+- **Motivo:** en viewports chicos la barra de cartas tapaba los carriles inferiores → no se podía desplegar.
+- **Riesgos:** bajo; el catcher solo intercepta cuando hay selección. Verificado sin doble-deploy (clear post-deploy + stopPropagation).
+- **Cómo probar:** `?scene=battle&demo=1`, seleccionar carta, tocar el borde inferior del campo → deploy en carril de abajo.
+- **Estado:** ✅ verificado en preview (812×375).
+
 ## 2026-06-15 — Claude Code
 - **Objetivo:** Crear sistema de coordinación entre IAs + auditoría real (sin features).
 - **Archivos:** `docs/ai-coordination/{AI_MASTER_CONTEXT,AI_HANDOFF,PRODUCTION_ROADMAP,CURRENT_STATE,BUGS_AND_TECH_DEBT,ASSET_PIPELINE,FEATURE_OWNERSHIP,CHANGELOG_AI,NEXT_ACTIONS}.md` (nuevos); `AGENTS.md`, `CLAUDE.md`, `CODEX.md`, `GRAVITY.md` (nuevos, raíz).

@@ -6,10 +6,10 @@
 ## Última IA que trabajó
 - **Herramienta:** Claude Code (Opus)
 - **Fecha:** 2026-06-15
-- **Objetivo de la sesión:** Crear el sistema de coordinación entre IAs (`/docs/ai-coordination/` + AGENTS/CLAUDE/CODEX/GRAVITY) y auditar el estado real del repo. (NO se programaron features.)
+- **Objetivo de la sesión:** Crear el sistema de coordinación entre IAs + **arreglar el bug P0 de despliegue en carriles inferiores** (verificado en preview).
 
 ## Resumen ejecutivo
-Se creó la documentación viva de coordinación para que varias IAs (Codex, Claude Code, Gravity) trabajen sin pisarse. Se auditó el repo real: el juego ya es landscape, con progresión "empezás con 1 soldado + desbloqueos", tutorial, intro de historia, HUD premium y audio. Se detectó que otra herramienta (commit `c85f6c2`) sumó assets nuevos (fondos, spritesheets de boss, story panels), tests y `SeededRandom`, y dejó `CLAUDE_SYNC.md` desactualizado. Se documentó el **bug P0 de despliegue en los carriles inferiores** con hipótesis de causa. No se tocó código de gameplay.
+Se creó la documentación viva de coordinación (`/docs/ai-coordination/` + AGENTS/CLAUDE/CODEX/GRAVITY). Se auditó el repo. Se **resolvió el P0**: el toque en los carriles inferiores no llegaba al canvas porque la barra de cartas (DOM) lo tapaba en viewports chicos; se agregó un **DOM deploy-catcher** que enruta el toque a `handleBattlefieldClick` con coords lógicas, y se corrigió que `selectUnit/selectAbility` desactivaban el catcher al llamar al setter contrario. Verificado a 812×375 (Conscripto (3)→(2) al tocar el carril inferior). Acordado con el dueño: **los assets visuales los genera Codex con ChatGPT Images 2** — Claude no genera arte, solo integra y deja el pedido en `ASSET_PIPELINE.md`.
 
 ## Archivos modificados (esta sesión)
 - `docs/ai-coordination/*` (9 archivos NUEVOS) — sistema de coordinación. Riesgo: ninguno (solo docs).
@@ -26,7 +26,7 @@ Se creó la documentación viva de coordinación para que varias IAs (Codex, Cla
 - **P0-1 Despliegue carriles inferiores** (ver `BUGS_AND_TECH_DEBT.md`). Severidad P0. Reproducir: en combate, seleccionar unidad e intentar desplegar en los 2 carriles de abajo. Causa probable: barra de cartas DOM tapa el toque. Prioridad máxima.
 
 ## Bugs corregidos
-- (ninguno esta sesión)
+- **P0-1 despliegue carriles inferiores** — DOM deploy-catcher + fix de toggles de selección. Validado en preview (deploy en carril inferior OK). Archivos: `ui/BattleUI.ts`, `scenes/BattleScene.ts`, `utils/constants.ts`.
 
 ## Decisiones de diseño tomadas
 - **Empezar con 1 soldado (Conscripto)** + desbloqueo por medallas (reemplaza el arranque con 8 reclutas de `CLAUDE_SYNC.md`). Motivo: sensación de progresión roguelite. Impacto: `RunSystem.startNewRun`, `MetaProgression`, cartas dinámicas.

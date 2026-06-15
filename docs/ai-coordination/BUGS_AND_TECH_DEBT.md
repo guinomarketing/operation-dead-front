@@ -7,7 +7,10 @@ Estado: `abierto` / `en progreso` / `resuelto` / `no reproducible`.
 
 ## Bug P0-1 — No se puede desplegar en los 2 carriles inferiores
 - **Prioridad:** P0
-- **Estado:** abierto (sin verificar en motor)
+- **Estado:** ✅ RESUELTO 2026-06-15 (Claude Code, verificado en preview a 812×375).
+- **Solución aplicada:** se agregó un **DOM "deploy catcher"** transparente sobre la banda del battlefield (`BattleUI`) que enruta el toque al `handleBattlefieldClick` con coords lógicas, sin depender de que el toque llegue al canvas por debajo de las cartas. Además se corrigió que `selectUnit/selectAbility` llamaban a ambos setters y el segundo desactivaba el catcher y borraba la selección. Lanes reubicados a `[300,336,372,408]`.
+- **Validación:** seleccionar Conscripto → catcher `pointerEvents=auto` → tap en el borde inferior de la banda → carta (3)→(2) y suministros bajan = deploy en carril inferior OK.
+- **Causa raíz (histórico):** la barra de cartas (DOM, px fijos) cubre más pantalla en viewports chicos y tapaba el toque de los carriles 3/4.
 - **Cómo reproducir:** en combate, seleccionar una carta de unidad y tocar uno de los 2 carriles de abajo (lanes índice 2 y 3).
 - **Resultado esperado:** la unidad se despliega en ese carril.
 - **Resultado actual (reportado):** no despliega en los carriles inferiores; sí en los superiores.
