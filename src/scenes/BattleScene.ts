@@ -100,7 +100,8 @@ export class BattleScene extends Phaser.Scene {
       (unitId) => this.selectUnit(unitId),
       (abilityId) => this.selectAbility(abilityId),
       nodeType,
-      deployable
+      deployable,
+      (lx, ly) => this.handleBattlefieldClick(lx, ly)
     );
     this.drawVignette();
 

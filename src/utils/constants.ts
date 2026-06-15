@@ -44,8 +44,8 @@ export const FIELD = {
   SPAWN_ENEMY_X: 812, // los revenants salen del búnker
   // 4 carriles sobre la franja de suelo plano del fondo (battlefield.jpg).
   // Pies de la unidad por carril, de atrás (arriba) a adelante (abajo).
-  // Espaciado creciente hacia el frente para una leve sensación de perspectiva.
-  LANES_Y: [296, 336, 378, 422] as const,
+  // El más bajo queda dentro de la banda jugable (por encima de la barra de cartas).
+  LANES_Y: [300, 336, 372, 408] as const,
   UNIT_SEPARATION: 28, // px mínimos entre unidades del mismo carril
   /** Centro vertical del campo (para bases y splashes). */
   get CENTER_Y() {

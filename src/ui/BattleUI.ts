@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { UNIT_INDEX } from '../data/units';
+import { GAME_WIDTH, GAME_HEIGHT, LAYOUT } from '../utils/constants';
 
 const UI = '/assets/ui';
 
@@ -29,13 +30,15 @@ export class BattleUI {
 
   private selectedUnitId: string | null = null;
   private selectedAbilityId: string | null = null;
+  private deployCatcher!: HTMLElement;
 
   constructor(
     private scene: Phaser.Scene,
     private onSelectCard: (unitId: string) => void,
     private onSelectAbility: (abilityId: string) => void,
     private nodeType: string = 'battle',
-    private deployable: string[] = ['rifleman']
+    private deployable: string[] = ['rifleman'],
+    private onFieldTap: (logicalX: number, logicalY: number) => void = () => {}
   ) {
     this.container = document.getElementById('ui-layer')!;
     this.build();
@@ -44,6 +47,32 @@ export class BattleUI {
   // ─────────────────────────────────────────────────────────
   private build() {
     this.container.innerHTML = '';
+
+    // ===== DEPLOY CATCHER =====
+    // Capa transparente sobre la banda del battlefield. Resuelve el toque de
+    // despliegue/habilidad de forma confiable, sin depender de que el toque
+    // llegue al canvas por debajo del DOM (bug de carriles inferiores tapados
+    // por la barra de cartas en pantallas chicas). Solo activa cuando hay algo
+    // seleccionado; por debajo de las cartas/HUD en orden de DOM.
+    const bandTop = LAYOUT.UI_TOP_HEIGHT;
+    const bandBottom = GAME_HEIGHT - LAYOUT.UI_BOTTOM_HEIGHT;
+    const catcher = document.createElement('div');
+    Object.assign(catcher.style, {
+      position: 'absolute', left: '0', right: '0',
+      top: `${(bandTop / GAME_HEIGHT) * 100}%`,
+      height: `${((bandBottom - bandTop) / GAME_HEIGHT) * 100}%`,
+      pointerEvents: 'none', zIndex: '1', cursor: 'crosshair',
+    } as CSSStyleDeclaration);
+    catcher.addEventListener('pointerdown', (e: PointerEvent) => {
+      e.stopPropagation();
+      const rect = catcher.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const lx = ((e.clientX - rect.left) / rect.width) * GAME_WIDTH;
+      const ly = bandTop + ((e.clientY - rect.top) / rect.height) * (bandBottom - bandTop);
+      this.onFieldTap(lx, ly);
+    });
+    this.deployCatcher = catcher;
+    this.container.appendChild(catcher);
 
     // ===== TOP HUD =====
     const top = document.createElement('div');
@@ -352,6 +381,7 @@ export class BattleUI {
   public setSelectedUnit(unitId: string | null) {
     this.selectedUnitId = unitId;
     this.selectedAbilityId = null;
+    this.deployCatcher.style.pointerEvents = unitId ? 'auto' : 'none';
     for (const b of Object.values(this.abilityButtons)) { b.el.style.outline = 'none'; b.el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)'; }
     for (const [id, c] of Object.entries(this.cards)) {
       if (id === unitId) { c.el.style.outline = '2px solid #fbbf24'; c.el.style.boxShadow = '0 0 14px rgba(251,191,36,0.9)'; c.el.style.opacity = '1'; }
@@ -362,6 +392,7 @@ export class BattleUI {
   public setSelectedAbility(abilityId: string | null) {
     this.selectedAbilityId = abilityId;
     this.selectedUnitId = null;
+    this.deployCatcher.style.pointerEvents = abilityId ? 'auto' : 'none';
     for (const c of Object.values(this.cards)) { c.el.style.outline = 'none'; c.el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)'; }
     for (const [id, b] of Object.entries(this.abilityButtons)) {
       if (id === abilityId) { b.el.style.outline = '2px solid #ef4444'; b.el.style.boxShadow = '0 0 14px rgba(239,68,68,0.9)'; b.el.style.opacity = '1'; }
