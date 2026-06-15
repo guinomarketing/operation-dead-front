@@ -19,10 +19,6 @@ export class MapScene extends Phaser.Scene {
     super('Map');
   }
 
-  preload(): void {
-    if (!this.textures.exists('mapbg')) this.load.image('mapbg', '/assets/backgrounds/keyart-main.jpg');
-  }
-
   create(): void {
     // Leer estado de la run del registry
     this.runState = this.game.registry.get('runState');
@@ -31,7 +27,7 @@ export class MapScene extends Phaser.Scene {
     if (!this.runState || !this.mapDef) {
       console.warn('RunState not found, starting new run');
       this.runState = RunSystem.startNewRun();
-      this.mapDef = RunSystem.generateMap(this.runState.seed);
+      this.mapDef = RunSystem.generateMap(this.runState.seed, this.runState.operationId);
       this.game.registry.set('runState', this.runState);
       this.game.registry.set('mapDef', this.mapDef);
     }
@@ -68,12 +64,12 @@ export class MapScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#0a0d0a');
 
     // Key art de fondo, cubriendo y muy oscurecido (atmósfera de mapa de campaña)
-    if (this.textures.exists('mapbg')) {
-      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'mapbg');
+    if (this.textures.exists('map-patagonia')) {
+      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'map-patagonia');
       const cover = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
       bg.setScale(cover);
       bg.setDepth(-100);
-      const dark = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x070b09, 0.74);
+      const dark = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x070b09, 0.42);
       dark.setDepth(-95);
     }
 

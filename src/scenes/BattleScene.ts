@@ -14,6 +14,8 @@ import { UnitRenderer } from '../rendering/UnitRenderer';
 import { BattleUI } from '../ui/BattleUI';
 import { Audio2 } from '../systems/AudioSystem';
 import { MetaProgression } from '../systems/MetaProgression';
+import { OPERATION_INDEX } from '../data/operations';
+import { BOSS_INDEX } from '../data/bosses';
 
 // ── Layout constants ──────────────────────────────────────
 
@@ -56,8 +58,11 @@ export class BattleScene extends Phaser.Scene {
 
     const nodeType = data?.nodeType || 'battle';
     const battleMode = data?.battleMode || 'assault';
+    const operationId = runState?.operationId || 'op-first-light';
+    const bossId = OPERATION_INDEX[operationId]?.bossId;
+    const battleSeed = `${runState?.seed || 'preview'}:${runState?.currentNodeId || nodeType}`;
 
-    this.sim = new BattleSystem(baseHp, activeUpgrades, nodeType as any, battleMode as any);
+    this.sim = new BattleSystem(baseHp, activeUpgrades, nodeType as any, battleMode as any, bossId, operationId, battleSeed);
 
     if (runState) {
       this.sim.morale = runState.morale;
@@ -123,10 +128,11 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (nodeType === 'boss') {
+      const bossDef = BOSS_INDEX[bossId || 'general-eisenfaust'] || BOSS_INDEX['general-eisenfaust'];
       this.time.delayedCall(800, () => {
         this.cameras.main.flash(400, 150, 0, 0);
         this.cameras.main.shake(400, 0.01);
-        const splash = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, 'EL CORONEL REANIMADO', {
+        const splash = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, bossDef.name.toUpperCase(), {
           fontFamily: FONTS.title,
           fontSize: '32px',
           color: '#ef4444',
@@ -135,7 +141,7 @@ export class BattleScene extends Phaser.Scene {
           strokeThickness: 5
         }).setOrigin(0.5).setDepth(880);
 
-        const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, 'El mando que la muerte no detuvo', {
+        const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, bossDef.title, {
           fontFamily: FONTS.body,
           fontSize: '16px',
           color: '#ffffff',
@@ -166,7 +172,13 @@ export class BattleScene extends Phaser.Scene {
     // Color base por si el asset no cubre / mientras carga
     this.cameras.main.setBackgroundColor('#0d100c');
 
-    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'battlefield');
+    const runState = this.game.registry.get('runState');
+    const backgroundKey = runState?.operationId === 'op-hollow-town'
+      ? 'battlefield-town'
+      : runState?.operationId === 'op-iron-grave'
+        ? 'battlefield-ironworks'
+        : 'battlefield';
+    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, backgroundKey);
     bg.setDepth(-100);
     // Cover-scale: cubre la pantalla sin deformar (recorta el excedente).
     const cover = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);

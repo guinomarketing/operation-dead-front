@@ -33,7 +33,23 @@ export class ResultScene extends Phaser.Scene {
   }
 
   private drawBackground(won: boolean): void {
+    const textureKey = won ? 'result-victory' : 'result-defeat';
+    if (this.textures.exists(textureKey)) {
+      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, textureKey);
+      bg.setScale(Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height));
+      bg.setDepth(-100);
+      this.add.rectangle(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2,
+        GAME_WIDTH,
+        GAME_HEIGHT,
+        0x050707,
+        won ? 0.16 : 0.22,
+      ).setDepth(-95);
+    }
+
     const g = this.add.graphics();
+    g.setDepth(-90);
     const steps = 30;
     const stepH = GAME_HEIGHT / steps;
     
@@ -49,7 +65,7 @@ export class ResultScene extends Phaser.Scene {
       );
       
       // Make it very dark
-      g.fillStyle(Phaser.Display.Color.GetColor(c.r, c.g, c.b), won ? 0.3 : 0.4);
+      g.fillStyle(Phaser.Display.Color.GetColor(c.r, c.g, c.b), won ? 0.12 : 0.18);
       g.fillRect(0, i * stepH, GAME_WIDTH, stepH + 1);
     }
     

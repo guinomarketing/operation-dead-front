@@ -1,16 +1,18 @@
 import type { RunState, RunMapDef, RunNodeDef, NodeType, RunEffect, RosterSoldier } from '../types/RunTypes';
 import { BASES, MORALE } from '../utils/constants';
 import { MetaProgression } from './MetaProgression';
+import { OPERATION_INDEX } from '../data/operations';
+import { createSeededRandom, randomInt, randomItem } from '../utils/SeededRandom';
 
 const NOMBRES = ['Juan', 'Esteban', 'Santiago', 'Ignacio', 'Facundo', 'Lautaro', 'Bautista', 'Mateo', 'Rodrigo', 'Lucas', 'Enzo', 'Lionel', 'Beto', 'Cacho', 'Tito', 'Gato', 'Charly', 'Diego', 'Lucho', 'Felipe'];
 const APELLIDOS = ['Pérez', 'Rodríguez', 'González', 'Gómez', 'Fernández', 'López', 'Martínez', 'Álvarez', 'Romero', 'Sosa', 'Benítez', 'Giménez', 'Medina', 'Herrera', 'Castro', 'Paz', 'Ortega', 'Rojas', 'Díaz', 'Silva'];
 const APODOS = ['El Toro', 'El Gaucho', 'Lobo', 'Pájaro', 'Pulga', 'Pampa', 'Carancho', 'Comadreja', 'Víbora', 'Yacaré', 'Facha', 'Manco', 'Flaco', 'Gordo', 'Chino', 'Negro', 'Pibe', 'El Capo', 'La Fiera', 'Cuchillo'];
 
 export class RunSystem {
-  static generateRandomSoldier(unitId: string): RosterSoldier {
-    const id = 'soldier_' + Math.random().toString(36).substring(2, 9);
-    const name = NOMBRES[Math.floor(Math.random() * NOMBRES.length)] + ' ' + APELLIDOS[Math.floor(Math.random() * APELLIDOS.length)];
-    const nickname = APODOS[Math.floor(Math.random() * APODOS.length)];
+  static generateRandomSoldier(unitId: string, random: () => number = Math.random): RosterSoldier {
+    const id = 'soldier_' + random().toString(36).substring(2, 9);
+    const name = randomItem(random, NOMBRES) + ' ' + randomItem(random, APELLIDOS);
+    const nickname = randomItem(random, APODOS);
     return {
       id,
       unitId,
@@ -27,18 +29,22 @@ export class RunSystem {
   /**
    * Inicializa un nuevo estado de run limpio con el plantel (roster) inicial.
    */
-  static startNewRun(operationId: string = 'first-light', commanderId: string = 'miller'): RunState {
-    const seed = Math.random().toString(36).substring(2, 10);
+  static startNewRun(
+    operationId: string = 'op-first-light',
+    commanderId: string = 'capt-miller',
+    seed: string = Math.random().toString(36).substring(2, 10),
+  ): RunState {
+    const random = createSeededRandom(`${seed}:roster`);
 
     // Plantel inicial: 3 Conscriptos + 1 de cada clase YA desbloqueada (meta-progreso).
     const unlocked = MetaProgression.getUnlocked();
     const roster: RosterSoldier[] = [
-      RunSystem.generateRandomSoldier('rifleman'),
-      RunSystem.generateRandomSoldier('rifleman'),
-      RunSystem.generateRandomSoldier('rifleman'),
+      RunSystem.generateRandomSoldier('rifleman', random),
+      RunSystem.generateRandomSoldier('rifleman', random),
+      RunSystem.generateRandomSoldier('rifleman', random),
     ];
     for (const id of unlocked) {
-      if (id !== 'rifleman') roster.push(RunSystem.generateRandomSoldier(id));
+      if (id !== 'rifleman') roster.push(RunSystem.generateRandomSoldier(id, random));
     }
 
     return {
@@ -70,9 +76,12 @@ export class RunSystem {
    * La fila 0 contiene los puntos de entrada iniciales.
    * No hay élites en las filas 1 y 2.
    */
-  static generateMap(seed: string): RunMapDef {
+  static generateMap(seed: string, operationId: string = 'op-first-light'): RunMapDef {
     const nodes: RunNodeDef[] = [];
-    const rowsCount = 9;
+    const operation = OPERATION_INDEX[operationId] || OPERATION_INDEX['op-first-light'];
+    const random = createSeededRandom(`${seed}:${operation.id}:map`);
+    const rowsBeforeBoss = randomInt(random, operation.rows[0], operation.rows[1]);
+    const rowsCount = rowsBeforeBoss + 1;
 
     // Generar nodos para cada fila
     for (let r = 0; r < rowsCount; r++) {
@@ -95,9 +104,9 @@ export class RunSystem {
           // Asignar tipo según fila
           if (r === 0) {
             // Fila 0: Solo batallas y eventos
-            type = Math.random() < 0.6 ? 'battle' : 'event';
+            type = random() < 0.6 ? 'battle' : 'event';
           } else {
-            const roll = Math.random();
+            const roll = random();
             if (roll < 0.45) {
               type = 'battle';
             } else if (roll < 0.65) {
@@ -117,7 +126,7 @@ export class RunSystem {
             row: r,
             col: c,
             type,
-            battleMode: type === 'elite' ? 'defense' : (Math.random() < 0.5 ? 'assault' : 'defense'),
+            battleMode: type === 'elite' ? 'defense' : (random() < 0.5 ? 'assault' : 'defense'),
             edges: [],
           });
         });
@@ -130,9 +139,9 @@ export class RunSystem {
       const nextNodes = nodes.filter(n => n.row === r + 1);
 
       if (r === rowsCount - 2) {
-        // Fila 7 conecta toda al Boss (node_8_1)
+        // La penultima fila conecta completa al boss.
         currentNodes.forEach(n => {
-          n.edges.push(`node_8_1`);
+          n.edges.push(`node_${rowsCount - 1}_1`);
         });
       } else {
         // Conexión regular entre filas de 3 nodos
@@ -142,13 +151,13 @@ export class RunSystem {
           const possibleCols = [c - 1, c, c + 1].filter(col => col >= 0 && col <= 2);
           
           // Elegir al menos una conexión cercana
-          const mainCol = possibleCols[Math.floor(Math.random() * possibleCols.length)];
+          const mainCol = randomItem(random, possibleCols);
           n.edges.push(`node_${r+1}_${mainCol}`);
 
           // 40% de probabilidad de una segunda conexión
-          if (possibleCols.length > 1 && Math.random() < 0.4) {
+          if (possibleCols.length > 1 && random() < 0.4) {
             const otherCols = possibleCols.filter(col => col !== mainCol);
-            const secondCol = otherCols[Math.floor(Math.random() * otherCols.length)];
+            const secondCol = randomItem(random, otherCols);
             n.edges.push(`node_${r+1}_${secondCol}`);
           }
         });

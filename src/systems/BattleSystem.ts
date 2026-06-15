@@ -6,8 +6,10 @@ import { FIELD, BASES, ECONOMY, MORALE } from '../utils/constants';
 import { UNIT_INDEX } from '../data/units';
 import { ENEMY_INDEX } from '../data/enemies';
 import { BOSS_INDEX } from '../data/bosses';
+import { OPERATION_INDEX } from '../data/operations';
 import { WaveSystem } from './WaveSystem';
 import type { NodeType, BattleMode, RosterSoldier } from '../types/RunTypes';
+import { createSeededRandom } from '../utils/SeededRandom';
 
 export type Faction = 'ally' | 'enemy';
 
@@ -75,35 +77,61 @@ export class BattleSystem {
   waveSys: WaveSystem;
   nodeType: NodeType;
   battleMode: BattleMode;
+  bossId: string;
+  operationId: string;
 
   private nextUid = 1;
   private incomeCarry = 0;
+  private readonly seededRandom: () => number;
   pendingEvents: BattleEvent[] = [];
 
   constructor(
     allyBaseHp = BASES.ALLY_HP,
     activeUpgrades: string[] = [],
     nodeType: NodeType = 'battle',
-    battleMode: BattleMode = 'assault'
+    battleMode: BattleMode = 'assault',
+    bossId: string = 'general-eisenfaust',
+    operationId: string = 'op-first-light',
+    seed: string = 'battle',
   ) {
     this.allyBaseHp = allyBaseHp;
     this.allyBaseMaxHp = allyBaseHp;
     this.nodeType = nodeType;
     this.battleMode = battleMode;
+    this.bossId = BOSS_INDEX[bossId] ? bossId : 'general-eisenfaust';
+    this.operationId = OPERATION_INDEX[operationId] ? operationId : 'op-first-light';
+    this.seededRandom = createSeededRandom(`${seed}:${this.operationId}:${nodeType}:${battleMode}`);
     this.supplies = ECONOMY.STARTING_SUPPLIES;
     this.morale = MORALE.START;
     this.activeUpgrades = activeUpgrades;
     this.waveSys = new WaveSystem(this);
 
     if (nodeType === 'boss') {
-      const bossDef = BOSS_INDEX['general-eisenfaust'];
+      const bossDef = BOSS_INDEX[this.bossId];
       this.enemyBaseHp = bossDef.stats.maxHp;
       this.enemyBaseMaxHp = bossDef.stats.maxHp;
       // Spawn General Eisenfaust en el carril central (en posición de spawn enemigo)
-      this.spawnBoss('general-eisenfaust', FIELD.CENTER_LANE);
+      this.spawnBoss(this.bossId, FIELD.CENTER_LANE);
     } else {
       this.enemyBaseHp = BASES.ENEMY_BASTION_HP;
       this.enemyBaseMaxHp = BASES.ENEMY_BASTION_HP;
+    }
+  }
+
+  random(): number {
+    return this.seededRandom();
+  }
+
+  getWaveEnemyIds(): string[] {
+    const operation = OPERATION_INDEX[this.operationId];
+    return this.nodeType === 'elite'
+      ? [...operation.enemyPool, ...operation.elitePool]
+      : operation.enemyPool;
+  }
+
+  completeDefense(): void {
+    if (this.battleMode === 'defense' && this.outcome === 'ongoing') {
+      this.outcome = 'won';
     }
   }
 
@@ -268,6 +296,7 @@ export class BattleSystem {
     } else {
       this.waveSys.update(dtMs);
     }
+    if (this.outcome !== 'ongoing') return;
 
     // Economía
     this.incomeCarry += ECONOMY.INCOME_PER_SECOND * dt;
@@ -287,7 +316,7 @@ export class BattleSystem {
         if (c.burnTickTimer !== undefined) c.burnTickTimer -= dtMs;
         if (c.burnTickTimer !== undefined && c.burnTickTimer <= 0) {
            c.hp -= 3; // Burn damage
-           if (c.defId === 'general-eisenfaust') {
+           if (c.defId === this.bossId) {
              this.enemyBaseHp = Math.max(0, c.hp);
            }
            if (c.hp <= 0) this.kill(c, c.faction === 'ally' ? 'enemy' : 'ally');
@@ -335,8 +364,10 @@ export class BattleSystem {
         }
       } else {
         if (this.atEnemyBase(c)) {
-          this.hitBase(c);
-          c.attackCooldown = c.attackInterval;
+          if (c.attackCooldown <= 0) {
+            this.hitBase(c);
+            c.attackCooldown = c.attackInterval;
+          }
         } else {
           this.advance(c, dt);
         }
@@ -505,7 +536,7 @@ export class BattleSystem {
     const dmg = Math.max(1, baseDmg - target.armor);
     target.hp -= dmg;
     
-    if (target.defId === 'general-eisenfaust') {
+    if (target.defId === this.bossId) {
       this.enemyBaseHp = Math.max(0, target.hp);
     }
 
@@ -564,7 +595,7 @@ export class BattleSystem {
     }
 
     c.alive = false;
-    if (c.defId === 'general-eisenfaust') {
+    if (c.defId === this.bossId) {
       this.enemyBaseHp = 0;
     }
 
@@ -636,8 +667,13 @@ export class BattleSystem {
   }
 
   private checkOutcome(): void {
-    if (this.enemyBaseHp <= 0) this.outcome = 'won';
-    else if (this.allyBaseHp <= 0 || this.morale <= 0) this.outcome = 'lost';
+    if (this.allyBaseHp <= 0 || this.morale <= 0) {
+      this.outcome = 'lost';
+      return;
+    }
+    if (this.battleMode === 'assault' && this.enemyBaseHp <= 0) {
+      this.outcome = 'won';
+    }
   }
 
   castAirstrike(x: number): void {
@@ -646,7 +682,7 @@ export class BattleSystem {
         const dist = Math.abs(c.x - x);
         if (dist <= 140) {
           c.hp -= 80;
-          if (c.defId === 'general-eisenfaust') {
+          if (c.defId === this.bossId) {
             this.enemyBaseHp = Math.max(0, c.hp);
           }
           if (c.hp <= 0) this.kill(c, 'ally');
@@ -677,6 +713,7 @@ export class BattleSystem {
   }
 
   updateBossPhases(dtMs: number): void {
+    if (this.bossId !== 'general-eisenfaust') return;
     const boss = this.combatants.find(c => c.alive && c.defId === 'general-eisenfaust');
     if (!boss) return;
 

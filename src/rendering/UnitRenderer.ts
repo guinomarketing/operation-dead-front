@@ -17,13 +17,17 @@ const REAL_ART = new Set([
   'unit-bombero', 'unit-cientifica', 'unit-veterano', 'unit-gaucho', 'unit-colectivero', 'unit-electricista',
   'enemy-revenant-grunt', 'enemy-runner-corpse', 'enemy-shielded-revenant', 'enemy-exploder',
   'enemy-dead-officer', 'enemy-occultist', 'enemy-panzer-corpse', 'enemy-rot-hound', 'enemy-toxic-carrier',
-  'enemy-general-eisenfaust',
+  'enemy-general-eisenfaust', 'enemy-doctor-totenkopf', 'enemy-panzer-corpse-engine',
 ]);
+
+const FRAME_ANIMATED = new Set(['doctor-totenkopf', 'panzer-corpse-engine']);
 
 /** Altura base de display (px) por tipo, antes de la escala de carril. */
 function baseHeightFor(defId: string): number {
   switch (defId) {
     case 'general-eisenfaust': return 188; // jefe
+    case 'doctor-totenkopf': return 188;
+    case 'panzer-corpse-engine': return 220;
     case 'panzer-corpse': return 132; // mutante blindado (mini-boss)
     case 'shielded-revenant': return 96;
     case 'dead-officer': return 92;
@@ -47,6 +51,7 @@ export class UnitRenderer {
   private hpBarTrail: Phaser.GameObjects.Rectangle;
 
   private faction: 'ally' | 'enemy';
+  private frameAnimated: boolean;
   private dispW: number;
   private dispH: number;
   private barW: number;
@@ -69,6 +74,7 @@ export class UnitRenderer {
     this.scene = scene;
     this.uid = c.uid;
     this.faction = c.faction;
+    this.frameAnimated = FRAME_ANIMATED.has(c.defId);
     this.lastX = c.x;
     this.lastHp = c.hp;
 
@@ -89,8 +95,7 @@ export class UnitRenderer {
 
     if (hasTexture) {
       this.sprite = scene.add.image(c.x, groundY, textureKey);
-      const src = scene.textures.get(textureKey).getSourceImage() as HTMLImageElement;
-      const aspect = src && src.height ? src.width / src.height : 0.6;
+      const aspect = this.sprite.frame.height ? this.sprite.frame.width / this.sprite.frame.height : 0.6;
       this.dispW = this.dispH * aspect;
       this.sprite.setDisplaySize(this.dispW, this.dispH);
     } else {
@@ -211,6 +216,11 @@ export class UnitRenderer {
     this.sprite.angle = lean;
     this.sprite.scaleY = this.baseScaleY * squashY;
 
+    if (this.frameAnimated) {
+      if (this.hitFlashTimer > 0) this.sprite.setFrame(5);
+      else if (this.attackFlashTimer <= 0) this.sprite.setFrame(isMoving ? (Math.sin(this.walkPhase) > 0 ? 1 : 2) : 0);
+    }
+
     // ── Barra de vida ──
     const hpPct = Phaser.Math.Clamp(c.hp / c.maxHp, 0, 1);
     if (hpPct < this.trailHpPct) this.trailHpPct = Phaser.Math.Linear(this.trailHpPct, hpPct, 0.06);
@@ -225,7 +235,13 @@ export class UnitRenderer {
   }
 
   playAttack(): void {
-    this.attackFlashTimer = 90;
+    this.attackFlashTimer = this.frameAnimated ? 220 : 90;
+    if (this.frameAnimated) {
+      this.sprite.setFrame(3);
+      this.scene.time.delayedCall(80, () => {
+        if (this.sprite?.active) this.sprite.setFrame(4);
+      });
+    }
     this.sprite.setTint(0xffffff);
     const recoil = this.faction === 'ally' ? -4 : 4;
     this.scene.tweens.add({ targets: this.sprite, x: this.sprite.x + recoil, duration: 60, yoyo: true, ease: 'Power2' });

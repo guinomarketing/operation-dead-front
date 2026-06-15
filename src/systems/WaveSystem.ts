@@ -1,6 +1,7 @@
 import { WAVES } from '../utils/constants';
 import { ENEMY_INDEX } from '../data/enemies';
 import type { BattleSystem } from './BattleSystem';
+import { randomItem } from '../utils/SeededRandom';
 
 export interface WaveState {
   currentWave: number;
@@ -48,10 +49,10 @@ export class WaveSystem {
         this.state.isActive = false;
         this.state.gracePeriodTimer = 6000; // 6 seconds before next wave
         
-        // If that was the last wave, trigger win condition in BattleSystem
+        // Defense wins by surviving every wave. Assault must still destroy the bunker.
         if (this.state.currentWave >= this.state.totalWaves) {
           this.state.currentWave++; // Push it over total to stop ticking
-          this.sim.outcome = 'won';
+          this.sim.completeDefense();
         }
       }
       return;
@@ -83,7 +84,10 @@ export class WaveSystem {
   private spawnFromBudget(): void {
     // Pick an enemy that fits the budget
     // For MVP 0.2, mostly grunts, sometimes runners
-    const available = Object.values(ENEMY_INDEX).filter(e => (e.bounty || 1) <= this.state.budgetRemaining);
+    const pool = this.sim.getWaveEnemyIds()
+      .map(id => ENEMY_INDEX[id])
+      .filter((enemy): enemy is NonNullable<typeof enemy> => !!enemy);
+    const available = pool.filter(e => (e.bounty || 1) <= this.state.budgetRemaining);
     
     if (available.length === 0) {
       // Nothing fits budget, waste the rest
@@ -92,7 +96,7 @@ export class WaveSystem {
     }
 
     // Pick random available enemy (weight towards cheaper ones usually, but simple random for now)
-    const def = available[Math.floor(Math.random() * available.length)];
+    const def = randomItem(() => this.sim.random(), available);
     
     const spawned = this.sim.spawnEnemy(def.id);
     if (spawned) {
@@ -100,7 +104,7 @@ export class WaveSystem {
       this.state.timeSinceLastSpawn = 0;
       
       // Randomize next spawn delay between 1.5s and 3s
-      this.state.nextSpawnDelay = 1500 + Math.random() * 1500;
+      this.state.nextSpawnDelay = 1500 + this.sim.random() * 1500;
     }
   }
 }

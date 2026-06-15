@@ -7,13 +7,10 @@ import { UNIT_INDEX } from '../data/units';
 
 export class MainMenuScene extends Phaser.Scene {
   private uiContainer!: HTMLElement | null;
+  private background?: Phaser.GameObjects.Image;
 
   constructor() {
     super('MainMenu');
-  }
-
-  preload() {
-    this.load.image('bg_battlefield', '/assets/backgrounds/keyart-main.jpg');
   }
 
   create(): void {
@@ -21,7 +18,8 @@ export class MainMenuScene extends Phaser.Scene {
     this.game.registry.set('upgrades', []);
 
     // Dibujar el nuevo fondo premium
-    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg_battlefield');
+    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'keyart-main');
+    this.background = bg;
     // Escalar para que cubra la pantalla manteniendo la relación de aspecto
     const scaleX = GAME_WIDTH / bg.width;
     const scaleY = GAME_HEIGHT / bg.height;
@@ -37,6 +35,9 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Crear Interfaz HTML
     this.createHTMLMenu();
+    if (new URLSearchParams(window.location.search).get('panel') === 'unlocks') {
+      this.time.delayedCall(100, () => this.openUnlocksOverlay());
+    }
   }
 
   private createHTMLMenu() {
@@ -51,10 +52,10 @@ export class MainMenuScene extends Phaser.Scene {
     menuDiv.id = 'main-menu-ui';
 
     const title = document.createElement('h1');
-    title.innerHTML = 'OPERACIÓN<br/>CÓNDOR MUERTO';
+    title.innerHTML = 'PATAGONIA<br/>Z';
 
     const subtitle = document.createElement('p');
-    subtitle.innerText = 'La Legión marcha bajo una bandera robada.\nSostené la línea. Enterralos de nuevo.';
+    subtitle.innerText = 'La Patagonia no se entrega.\nSostené la línea. Enterralos de nuevo.';
     subtitle.style.fontSize = '1.2rem';
     subtitle.style.color = '#ccc';
     subtitle.style.textAlign = 'center';
@@ -90,9 +91,12 @@ export class MainMenuScene extends Phaser.Scene {
 
   private openUnlocksOverlay(): void {
     if (!this.uiContainer) return;
+    this.setBackground('hq-progression');
+    const menu = document.getElementById('main-menu-ui');
+    if (menu) menu.style.visibility = 'hidden';
     const overlay = document.createElement('div');
     Object.assign(overlay.style, {
-      position: 'absolute', inset: '0', background: 'rgba(8,10,8,0.96)', zIndex: '300',
+      position: 'absolute', inset: '0', background: 'rgba(8,10,8,0.62)', zIndex: '300',
       pointerEvents: 'auto', display: 'flex', flexDirection: 'column', padding: '18px 22px', boxSizing: 'border-box',
     } as CSSStyleDeclaration);
 
@@ -104,7 +108,12 @@ export class MainMenuScene extends Phaser.Scene {
       h.innerHTML = `<span style="font-family:var(--font-title); font-size:22px; color:var(--primary);">CUARTEL · DESBLOQUEOS</span> <span style="color:#f0d070; font-family:var(--font-title); margin-left:14px;">★ ${MetaProgression.getMedals()} medallas</span>`;
       const close = document.createElement('button');
       close.className = 'btn-primary'; close.innerText = 'VOLVER'; close.style.padding = '6px 16px'; close.style.fontSize = '12px';
-      close.onclick = () => { Audio2.play('uiClick'); overlay.remove(); };
+      close.onclick = () => {
+        Audio2.play('uiClick');
+        overlay.remove();
+        if (menu) menu.style.visibility = 'visible';
+        this.setBackground('keyart-main');
+      };
       header.appendChild(h); header.appendChild(close);
       overlay.appendChild(header);
 
@@ -155,10 +164,17 @@ export class MainMenuScene extends Phaser.Scene {
     this.uiContainer.appendChild(overlay);
   }
 
+  private setBackground(textureKey: string): void {
+    if (!this.background) return;
+    this.background.setTexture(textureKey);
+    const scale = Math.max(GAME_WIDTH / this.background.width, GAME_HEIGHT / this.background.height);
+    this.background.setScale(scale);
+  }
+
   private startGame(menuDiv: HTMLElement) {
     // Inicializar RunState procedimental (MVP 0.3)
     const runState = RunSystem.startNewRun();
-    const mapDef = RunSystem.generateMap(runState.seed);
+    const mapDef = RunSystem.generateMap(runState.seed, runState.operationId);
     this.game.registry.set('runState', runState);
     this.game.registry.set('mapDef', mapDef);
 

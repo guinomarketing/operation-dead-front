@@ -15,22 +15,20 @@ const PAGES = [
 
 export class StoryScene extends Phaser.Scene {
   private uiContainer!: HTMLElement | null;
+  private background?: Phaser.GameObjects.Image;
 
   constructor() {
     super('Story');
   }
 
-  preload(): void {
-    if (!this.textures.exists('story_bg')) this.load.image('story_bg', '/assets/backgrounds/keyart-main.jpg');
-  }
-
   create(): void {
     this.cameras.main.setBackgroundColor('#07090a');
-    if (this.textures.exists('story_bg')) {
-      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'story_bg');
+    if (this.textures.exists('story-01')) {
+      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'story-01');
       const cover = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
       bg.setScale(cover);
-      this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x05070a, 0.62);
+      this.background = bg;
+      this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x05070a, 0.16);
     }
     this.cameras.main.fadeIn(700, 0, 0, 0);
     Audio2.unlock();
@@ -79,8 +77,12 @@ export class StoryScene extends Phaser.Scene {
     root.appendChild(text); root.appendChild(dots); root.appendChild(row);
     this.uiContainer.appendChild(root);
 
-    let i = 0;
+    const requestedPage = Number(new URLSearchParams(window.location.search).get('storyPage') || '1') - 1;
+    let i = Phaser.Math.Clamp(Number.isFinite(requestedPage) ? requestedPage : 0, 0, PAGES.length - 1);
+    let firstRender = true;
     const render = () => {
+      this.showPanel(i, !firstRender);
+      firstRender = false;
       text.style.opacity = '0';
       window.setTimeout(() => { text.innerText = PAGES[i]; text.style.transition = 'opacity 0.4s'; text.style.opacity = '1'; }, 60);
       dots.innerText = PAGES.map((_, k) => (k === i ? '●' : '○')).join(' ');
@@ -93,6 +95,34 @@ export class StoryScene extends Phaser.Scene {
       render();
     };
     render();
+  }
+
+  private showPanel(index: number, animate: boolean): void {
+    if (!this.background) return;
+    const textureKey = `story-0${index + 1}`;
+    if (!this.textures.exists(textureKey) || this.background.texture.key === textureKey) return;
+    const applyTexture = () => {
+      if (!this.background) return;
+      this.background.setTexture(textureKey);
+      const cover = Math.max(GAME_WIDTH / this.background.width, GAME_HEIGHT / this.background.height);
+      this.background.setScale(cover);
+    };
+    if (!animate) {
+      applyTexture();
+      this.background.setAlpha(1);
+      return;
+    }
+    this.tweens.killTweensOf(this.background);
+    this.tweens.add({
+      targets: this.background,
+      alpha: 0.15,
+      duration: 160,
+      onComplete: () => {
+        applyTexture();
+        if (!this.background) return;
+        this.tweens.add({ targets: this.background, alpha: 1, duration: 320 });
+      },
+    });
   }
 
   private goMap(): void {
