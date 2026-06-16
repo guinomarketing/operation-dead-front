@@ -47,6 +47,10 @@ export class BattleScene extends Phaser.Scene {
   private activeAbilityId: string | null = null;
   private deployIndicators!: Phaser.GameObjects.Graphics;
 
+  // Pausa e interfaz de pausa
+  private isPaused = false;
+  private pauseOverlay: HTMLElement | null = null;
+
   constructor() {
     super('Battle');
   }
@@ -103,9 +107,23 @@ export class BattleScene extends Phaser.Scene {
       (abilityId) => this.selectAbility(abilityId),
       nodeType,
       deployable,
-      (lx, ly) => this.handleBattlefieldClick(lx, ly)
+      (lx, ly) => this.handleBattlefieldClick(lx, ly),
+      () => this.togglePause()
     );
     this.drawVignette();
+
+    // Tecla ESC para pausar/reanudar
+    this.input.keyboard?.on('keydown-ESC', () => {
+      this.togglePause();
+    });
+
+    // Limpiar el overlay de pausa si la escena se destruye externamente
+    this.events.once('shutdown', () => {
+      if (this.pauseOverlay) {
+        this.pauseOverlay.remove();
+        this.pauseOverlay = null;
+      }
+    });
 
     // Clics en el campo de batalla
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -323,6 +341,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private handleBattlefieldClick(x: number, y: number): void {
+    if (this.isPaused) return;
     if (this.selectedUnitId) {
       // Zona desplegable: banda del battlefield (con un pequeño margen vertical).
       const top = FIELD.LANES_Y[0] - 50;
@@ -908,6 +927,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    if (this.isPaused) return;
     if (this.sim.outcome !== 'ongoing') return;
 
     // Sincronizar combatientes
@@ -1211,5 +1231,219 @@ export class BattleScene extends Phaser.Scene {
       duration: 1000,
       onComplete: () => cloud.destroy()
     });
+  }
+
+  private togglePause(): void {
+    this.isPaused = !this.isPaused;
+
+    if (this.isPaused) {
+      // Pausar relojes, tweens y animaciones en Phaser
+      this.time.paused = true;
+      this.tweens.pauseAll();
+      this.anims.pauseAll();
+
+      // Deseleccionar cartas de unidad/habilidad para evitar glitches visuales
+      this.selectedUnitId = null;
+      this.activeAbilityId = null;
+      this.ui.clearSelection();
+
+      // Crear el overlay modal HTML
+      const uiLayer = document.getElementById('ui-layer');
+      if (uiLayer) {
+        const overlay = document.createElement('div');
+        overlay.className = 'glass-panel';
+        Object.assign(overlay.style, {
+          position: 'absolute',
+          inset: '50px 80px',
+          background: 'rgba(15,18,15,0.95)',
+          zIndex: '300',
+          pointerEvents: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '20px 25px',
+          boxSizing: 'border-box',
+          border: '2px solid var(--panel-border)',
+          boxShadow: '5px 5px 0px rgba(0,0,0,0.8)'
+        } as CSSStyleDeclaration);
+
+        // Header
+        const header = document.createElement('div');
+        Object.assign(header.style, {
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '2px solid #3f3f3f',
+          paddingBottom: '8px',
+          marginBottom: '15px'
+        } as CSSStyleDeclaration);
+
+        const titleSpan = document.createElement('div');
+        titleSpan.innerHTML = `<span style="font-family:var(--font-title); font-size:22px; color:var(--primary);">BATALLA EN PAUSA</span>`;
+        header.appendChild(titleSpan);
+        overlay.appendChild(header);
+
+        // Content
+        const content = document.createElement('div');
+        Object.assign(content.style, {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '15px',
+          flex: '1'
+        } as CSSStyleDeclaration);
+
+        // Slider Música
+        const musicRow = document.createElement('div');
+        musicRow.innerHTML = `<div style="font-family:var(--font-title); font-size:13px; color:#aaa; margin-bottom:4px;">VOLUMEN MÚSICA</div>`;
+        const musicSliderContainer = document.createElement('div');
+        Object.assign(musicSliderContainer.style, { display: 'flex', alignItems: 'center', gap: '15px' });
+
+        const musicSlider = document.createElement('input');
+        musicSlider.type = 'range';
+        musicSlider.min = '0';
+        musicSlider.max = '100';
+        musicSlider.value = Math.round(Audio2.musicVolume * 100).toString();
+        musicSlider.style.flex = '1';
+        musicSlider.style.accentColor = 'var(--primary)';
+
+        const musicVal = document.createElement('span');
+        Object.assign(musicVal.style, { fontFamily: 'var(--font-title)', fontSize: '15px', width: '40px', textAlign: 'right' });
+        musicVal.innerText = `${musicSlider.value}%`;
+
+        musicSlider.oninput = () => {
+          const v = parseInt(musicSlider.value);
+          musicVal.innerText = `${v}%`;
+          Audio2.setMusicVolume(v / 100);
+        };
+
+        musicSliderContainer.appendChild(musicSlider);
+        musicSliderContainer.appendChild(musicVal);
+        musicRow.appendChild(musicSliderContainer);
+        content.appendChild(musicRow);
+
+        // Slider SFX
+        const sfxRow = document.createElement('div');
+        sfxRow.innerHTML = `<div style="font-family:var(--font-title); font-size:13px; color:#aaa; margin-bottom:4px;">VOLUMEN EFECTOS (SFX)</div>`;
+        const sfxSliderContainer = document.createElement('div');
+        Object.assign(sfxSliderContainer.style, { display: 'flex', alignItems: 'center', gap: '15px' });
+
+        const sfxSlider = document.createElement('input');
+        sfxSlider.type = 'range';
+        sfxSlider.min = '0';
+        sfxSlider.max = '100';
+        sfxSlider.value = Math.round(Audio2.sfxVolume * 100).toString();
+        sfxSlider.style.flex = '1';
+        sfxSlider.style.accentColor = 'var(--primary)';
+
+        const sfxVal = document.createElement('span');
+        Object.assign(sfxVal.style, { fontFamily: 'var(--font-title)', fontSize: '15px', width: '40px', textAlign: 'right' });
+        sfxVal.innerText = `${sfxSlider.value}%`;
+
+        let lastPlay = 0;
+        sfxSlider.oninput = () => {
+          const v = parseInt(sfxSlider.value);
+          sfxVal.innerText = `${v}%`;
+          Audio2.setSfxVolume(v / 100);
+
+          const now = Date.now();
+          if (now - lastPlay > 85) {
+            Audio2.play('uiClick');
+            lastPlay = now;
+          }
+        };
+
+        sfxSliderContainer.appendChild(sfxSlider);
+        sfxSliderContainer.appendChild(sfxVal);
+        sfxRow.appendChild(sfxSliderContainer);
+        content.appendChild(sfxRow);
+
+        // Mute
+        const muteRow = document.createElement('div');
+        Object.assign(muteRow.style, { display: 'flex', alignItems: 'center', gap: '12px', marginTop: '5px' });
+
+        const muteCheckbox = document.createElement('input');
+        muteCheckbox.type = 'checkbox';
+        muteCheckbox.id = 'pause-cfg-mute';
+        muteCheckbox.checked = Audio2.muted;
+        muteCheckbox.style.width = '18px';
+        muteCheckbox.style.height = '18px';
+        muteCheckbox.style.cursor = 'pointer';
+        muteCheckbox.style.accentColor = 'var(--primary)';
+
+        const muteLabel = document.createElement('label');
+        muteLabel.htmlFor = 'pause-cfg-mute';
+        muteLabel.innerText = 'SILENCIAR TODO';
+        Object.assign(muteLabel.style, { fontFamily: 'var(--font-title)', fontSize: '13px', cursor: 'pointer' });
+
+        muteCheckbox.onchange = () => {
+          Audio2.toggleMute();
+          Audio2.play('uiClick');
+        };
+
+        muteRow.appendChild(muteCheckbox);
+        muteRow.appendChild(muteLabel);
+        content.appendChild(muteRow);
+
+        overlay.appendChild(content);
+
+        // Footer / Botones
+        const footer = document.createElement('div');
+        Object.assign(footer.style, {
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginTop: '15px',
+          gap: '15px'
+        } as CSSStyleDeclaration);
+
+        const resumeBtn = document.createElement('button');
+        resumeBtn.className = 'btn-primary';
+        resumeBtn.innerText = 'REANUDAR';
+        Object.assign(resumeBtn.style, { flex: '1', fontSize: '14px', padding: '10px 15px' });
+        resumeBtn.onclick = () => {
+          Audio2.play('uiClick');
+          this.togglePause();
+        };
+
+        const retreatBtn = document.createElement('button');
+        retreatBtn.className = 'btn-primary';
+        retreatBtn.innerText = 'RETIRARSE';
+        Object.assign(retreatBtn.style, {
+          flex: '1',
+          fontSize: '14px',
+          padding: '10px 15px',
+          background: '#c0392b',
+          color: '#fff',
+          border: '2px solid #5a1410'
+        });
+        retreatBtn.onclick = () => {
+          Audio2.play('uiClick');
+          overlay.remove();
+          this.pauseOverlay = null;
+          this.isPaused = false;
+          // Reanudar antes de terminar la batalla para evitar que se quede congelado
+          this.time.paused = false;
+          this.tweens.resumeAll();
+          this.anims.resumeAll();
+          this.endBattle('lost');
+        };
+
+        footer.appendChild(resumeBtn);
+        footer.appendChild(retreatBtn);
+        overlay.appendChild(footer);
+
+        uiLayer.appendChild(overlay);
+        this.pauseOverlay = overlay;
+      }
+    } else {
+      // Reanudar Phaser
+      this.time.paused = false;
+      this.tweens.resumeAll();
+      this.anims.resumeAll();
+
+      // Remover overlay
+      if (this.pauseOverlay) {
+        this.pauseOverlay.remove();
+        this.pauseOverlay = null;
+      }
+    }
   }
 }

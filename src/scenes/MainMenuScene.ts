@@ -81,10 +81,21 @@ export class MainMenuScene extends Phaser.Scene {
     unlockBtn.style.color = '#f0d070';
     unlockBtn.onclick = () => { Audio2.unlock(); Audio2.play('uiClick'); this.openUnlocksOverlay(); };
 
+    const configBtn = document.createElement('button');
+    configBtn.className = 'btn-primary';
+    configBtn.innerText = '⚙ CONFIGURACIÓN';
+    configBtn.style.marginTop = '14px';
+    configBtn.style.padding = '10px 28px';
+    configBtn.style.fontSize = '1.1rem';
+    configBtn.style.background = '#2a2a2d';
+    configBtn.style.color = '#ffffff';
+    configBtn.onclick = () => { Audio2.unlock(); Audio2.play('uiClick'); this.openConfigOverlay(); };
+
     menuDiv.appendChild(title);
     menuDiv.appendChild(subtitle);
     menuDiv.appendChild(startBtn);
     menuDiv.appendChild(unlockBtn);
+    menuDiv.appendChild(configBtn);
 
     this.uiContainer.appendChild(menuDiv);
   }
@@ -192,5 +203,153 @@ export class MainMenuScene extends Phaser.Scene {
       // Intro narrativa → mapa de la run
       this.scene.start('Story');
     });
+  }
+
+  private openConfigOverlay(): void {
+    if (!this.uiContainer) return;
+    this.setBackground('hq-progression');
+    const menu = document.getElementById('main-menu-ui');
+    if (menu) menu.style.visibility = 'hidden';
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'glass-panel';
+    Object.assign(overlay.style, {
+      position: 'absolute', inset: '60px 80px', background: 'rgba(15,18,15,0.95)', zIndex: '300',
+      pointerEvents: 'auto', display: 'flex', flexDirection: 'column', padding: '24px 30px', boxSizing: 'border-box',
+      border: '2px solid var(--panel-border)', boxShadow: '5px 5px 0px rgba(0,0,0,0.8)'
+    } as CSSStyleDeclaration);
+
+    const header = document.createElement('div');
+    Object.assign(header.style, { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #3f3f3f', paddingBottom: '10px', marginBottom: '20px' } as CSSStyleDeclaration);
+    
+    const h = document.createElement('div');
+    h.innerHTML = `<span style="font-family:var(--font-title); font-size:22px; color:var(--primary);">CENTRO DE OPERACIONES · AUDIO</span>`;
+    
+    const close = document.createElement('button');
+    close.className = 'btn-primary'; close.innerText = 'VOLVER'; close.style.padding = '6px 16px'; close.style.fontSize = '12px';
+    close.onclick = () => {
+      Audio2.play('uiClick');
+      overlay.remove();
+      if (menu) menu.style.visibility = 'visible';
+      this.setBackground('keyart-main');
+    };
+    
+    header.appendChild(h);
+    header.appendChild(close);
+    overlay.appendChild(header);
+
+    // Contenido de configuración
+    const content = document.createElement('div');
+    Object.assign(content.style, { display: 'flex', flexDirection: 'column', gap: '20px', flex: '1' } as CSSStyleDeclaration);
+
+    // MÚSICA
+    const musicRow = document.createElement('div');
+    musicRow.innerHTML = `<div style="font-family:var(--font-title); font-size:14px; color:#aaa; margin-bottom:6px;">VOLUMEN MÚSICA</div>`;
+    const musicSliderContainer = document.createElement('div');
+    musicSliderContainer.style.display = 'flex';
+    musicSliderContainer.style.alignItems = 'center';
+    musicSliderContainer.style.gap = '15px';
+
+    const musicSlider = document.createElement('input');
+    musicSlider.type = 'range';
+    musicSlider.min = '0';
+    musicSlider.max = '100';
+    musicSlider.value = Math.round(Audio2.musicVolume * 100).toString();
+    musicSlider.style.flex = '1';
+    musicSlider.style.accentColor = 'var(--primary)';
+
+    const musicVal = document.createElement('span');
+    musicVal.style.fontFamily = 'var(--font-title)';
+    musicVal.style.fontSize = '16px';
+    musicVal.style.width = '40px';
+    musicVal.style.textAlign = 'right';
+    musicVal.innerText = `${musicSlider.value}%`;
+
+    musicSlider.oninput = () => {
+      const v = parseInt(musicSlider.value);
+      musicVal.innerText = `${v}%`;
+      Audio2.setMusicVolume(v / 100);
+    };
+
+    musicSliderContainer.appendChild(musicSlider);
+    musicSliderContainer.appendChild(musicVal);
+    musicRow.appendChild(musicSliderContainer);
+    content.appendChild(musicRow);
+
+    // SFX
+    const sfxRow = document.createElement('div');
+    sfxRow.innerHTML = `<div style="font-family:var(--font-title); font-size:14px; color:#aaa; margin-bottom:6px;">VOLUMEN EFECTOS (SFX)</div>`;
+    const sfxSliderContainer = document.createElement('div');
+    sfxSliderContainer.style.display = 'flex';
+    sfxSliderContainer.style.alignItems = 'center';
+    sfxSliderContainer.style.gap = '15px';
+
+    const sfxSlider = document.createElement('input');
+    sfxSlider.type = 'range';
+    sfxSlider.min = '0';
+    sfxSlider.max = '100';
+    sfxSlider.value = Math.round(Audio2.sfxVolume * 100).toString();
+    sfxSlider.style.flex = '1';
+    sfxSlider.style.accentColor = 'var(--primary)';
+
+    const sfxVal = document.createElement('span');
+    sfxVal.style.fontFamily = 'var(--font-title)';
+    sfxVal.style.fontSize = '16px';
+    sfxVal.style.width = '40px';
+    sfxVal.style.textAlign = 'right';
+    sfxVal.innerText = `${sfxSlider.value}%`;
+
+    let lastPlay = 0;
+    sfxSlider.oninput = () => {
+      const v = parseInt(sfxSlider.value);
+      sfxVal.innerText = `${v}%`;
+      Audio2.setSfxVolume(v / 100);
+
+      const now = Date.now();
+      if (now - lastPlay > 85) {
+        Audio2.play('uiClick');
+        lastPlay = now;
+      }
+    };
+
+    sfxSliderContainer.appendChild(sfxSlider);
+    sfxSliderContainer.appendChild(sfxVal);
+    sfxRow.appendChild(sfxSliderContainer);
+    content.appendChild(sfxRow);
+
+    // SILENCIAR TODO
+    const muteRow = document.createElement('div');
+    muteRow.style.display = 'flex';
+    muteRow.style.alignItems = 'center';
+    muteRow.style.gap = '12px';
+    muteRow.style.marginTop = '10px';
+
+    const muteCheckbox = document.createElement('input');
+    muteCheckbox.type = 'checkbox';
+    muteCheckbox.id = 'cfg-mute';
+    muteCheckbox.checked = Audio2.muted;
+    muteCheckbox.style.width = '18px';
+    muteCheckbox.style.height = '18px';
+    muteCheckbox.style.cursor = 'pointer';
+    muteCheckbox.style.accentColor = 'var(--primary)';
+
+    const muteLabel = document.createElement('label');
+    muteLabel.htmlFor = 'cfg-mute';
+    muteLabel.innerText = 'SILENCIAR TODO';
+    muteLabel.style.fontFamily = 'var(--font-title)';
+    muteLabel.style.fontSize = '14px';
+    muteLabel.style.cursor = 'pointer';
+
+    muteCheckbox.onchange = () => {
+      Audio2.toggleMute();
+      Audio2.play('uiClick');
+    };
+
+    muteRow.appendChild(muteCheckbox);
+    muteRow.appendChild(muteLabel);
+    content.appendChild(muteRow);
+
+    overlay.appendChild(content);
+    this.uiContainer.appendChild(overlay);
   }
 }

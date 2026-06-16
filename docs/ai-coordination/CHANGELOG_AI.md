@@ -5,6 +5,19 @@ Formato por entrada: Fecha — Herramienta · Objetivo · Archivos · Cambios ·
 
 ---
 
+## 2026-06-16 — Antigravity (combat pause & volume config overlay)
+- **Objetivo:** Implementar la pausa suave de combate y el control de configuración de volúmenes en el menú principal y pantalla de batalla.
+- **Archivos:** `src/scenes/MainMenuScene.ts`, `src/ui/BattleUI.ts`, `src/scenes/BattleScene.ts`, `docs/ai-coordination/{AI_HANDOFF,CHANGELOG_AI,NEXT_ACTIONS,BUGS_AND_TECH_DEBT}.md`.
+- **Cambios:**
+  1. Modifiqué `MainMenuScene.ts` para inyectar el botón de `CONFIGURACIÓN` y añadir el modal HTML interactivo `openConfigOverlay()` para volúmenes de música, SFX (con feedback auditivo al arrastrar) y mute.
+  2. Modifiqué `BattleUI.ts` para reducir el tamaño del panel de HUD y añadir el botón flotante `⏸` interactivo vinculando `onPauseToggle`.
+  3. Modifiqué `BattleScene.ts` para registrar la tecla `ESC` y el botón de pausa flotante, pausando el reloj de Phaser, tweens y animaciones, y mostrando el modal de pausa. El modal incluye sliders de audio y botón de `RETIRARSE` que procesa la derrota (aplica permadeath a bajas de la batalla actual).
+  4. Resolví la falta de importación de `Audio2` en `BattleUI.ts` para corregir la compilación en TypeScript.
+- **Motivo:** Cumplir con los requerimientos de la Fase 2 de UX/UI en el roadmap y mejorar el control del volumen de juego y opciones de flujo de la partida.
+- **Riesgos:** Ninguno. La pausa suave no congela el sistema de entrada de Phaser, permitiendo que la tecla `ESC` reanude la batalla sin trabas.
+- **Cómo probar:** `npm run build` y `npm run test` (pasan OK); iniciar una partida de prueba con `?scene=battle&demo=1`, presionar `ESC` o hacer clic en `⏸`, cambiar sliders o hacer clic en "RETIRARSE" para verificar permadeath; abrir menú principal y probar botón de configuración.
+- **Estado:** ✅ Completado y verificado. Build y tests verdes.
+
 ## 2026-06-15 — Antigravity (relic visuals & tooltip pass)
 - **Objetivo:** Darle identidad visual a las reliquias en campaña/recompensas con iconos pixel art, tooltips HTML detallados e inventario táctico.
 - **Archivos:** `src/types/RunTypes.ts`, `src/data/relics.ts`, `src/ui/TooltipManager.ts` (nuevo), `src/scenes/BootScene.ts`, `src/scenes/MapScene.ts`, `src/scenes/ResultScene.ts`, `public/assets/sprites/relics-sheet.png` (nuevo), `docs/ai-coordination/{AI_HANDOFF,CHANGELOG_AI,NEXT_ACTIONS,BUGS_AND_TECH_DEBT}.md`.

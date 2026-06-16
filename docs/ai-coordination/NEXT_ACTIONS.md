@@ -16,7 +16,7 @@
 
 ## P2 — Luego
 1. **Personalización de tropas** ampliada (especializaciones, variantes, skins, habilidades desbloqueables).
-2. **Pantallas**: evento a 2 columnas, recompensa, config con volúmenes, pausa.
+2. **Pantallas**: evento a 2 columnas, recompensa (menú de configuración y pausa completados).
 3. **Logo Patagonia Z** real + pulido de tipografía/branding. → **Codex**.
 4. **Balance** de economía/oleadas/curva de desbloqueo.
 

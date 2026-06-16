@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { UNIT_INDEX } from '../data/units';
 import { GAME_WIDTH, GAME_HEIGHT, LAYOUT } from '../utils/constants';
+import { Audio2 } from '../systems/AudioSystem';
 
 const UI = '/assets/ui';
 
@@ -38,7 +39,8 @@ export class BattleUI {
     private onSelectAbility: (abilityId: string) => void,
     private nodeType: string = 'battle',
     private deployable: string[] = ['rifleman'],
-    private onFieldTap: (logicalX: number, logicalY: number) => void = () => {}
+    private onFieldTap: (logicalX: number, logicalY: number) => void = () => {},
+    private onPauseToggle: () => void = () => {}
   ) {
     this.container = document.getElementById('ui-layer')!;
     this.build();
@@ -77,7 +79,7 @@ export class BattleUI {
     // ===== TOP HUD =====
     const top = document.createElement('div');
     Object.assign(top.style, {
-      position: 'absolute', top: '8px', left: '10px', right: '10px',
+      position: 'absolute', top: '8px', left: '10px', right: '54px',
       display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
       gap: '10px', pointerEvents: 'none',
     } as CSSStyleDeclaration);
@@ -184,6 +186,25 @@ export class BattleUI {
 
     this.container.appendChild(top);
     this.container.appendChild(bottom);
+
+    // Botón de pausa flotante
+    const pauseBtn = document.createElement('button');
+    pauseBtn.className = 'btn-primary';
+    pauseBtn.innerText = '⏸';
+    Object.assign(pauseBtn.style, {
+      position: 'absolute', top: '8px', right: '10px',
+      width: '34px', height: '34px', padding: '0',
+      display: 'flex', justifyContent: 'center', alignItems: 'center',
+      fontSize: '16px', zIndex: '200', pointerEvents: 'auto',
+      background: 'var(--panel-bg)', color: '#fff', border: '2px solid var(--panel-border)',
+      boxShadow: '3px 3px 0px rgba(0,0,0,0.9)', cursor: 'pointer',
+      fontFamily: 'var(--font-title)', borderRadius: '2px'
+    });
+    pauseBtn.onclick = () => {
+      Audio2.play('uiClick');
+      this.onPauseToggle();
+    };
+    this.container.appendChild(pauseBtn);
   }
 
   // ── builders ──
