@@ -5,6 +5,24 @@ Formato por entrada: Fecha — Herramienta · Objetivo · Archivos · Cambios ·
 
 ---
 
+## 2026-06-16 — Antigravity (complete UI/UX overhaul & official logo)
+- **Objetivo:** Rediseñar por completo la interfaz, menús, botones y e integrar el logotipo oficial del juego basado en la referencia provista por el usuario para lograr una calidad AAA.
+- **Archivos:** `src/style.css`, `src/scenes/MainMenuScene.ts`, `src/ui/BattleUI.ts`, `src/scenes/BattleScene.ts`, `src/scenes/ResultScene.ts`, `src/scenes/MapScene.ts`, `public/assets/ui/logo.png` (nuevo/reemplazo), `docs/ai-coordination/{AI_HANDOFF,CHANGELOG_AI,NEXT_ACTIONS}.md`.
+- **Cambios:**
+  1. Copié la imagen de referencia subida por el usuario a `public/assets/ui/logo.png`.
+  2. Reemplacé el título en texto plano de `MainMenuScene.ts` con una etiqueta `<img>` que carga este logotipo de manera responsiva, con animaciones de pulso y sombra refinadas.
+  3. Rediseñé el menú principal agrupando botones en una consola de comandos `.briefing-console` y enmarcando el subtítulo en un panel `.briefing-subtitle` estilo terminal de briefing.
+  4. Rediseñé los botones en `style.css`: `.btn-primary` (placa de metal ámbar con relieves, hover glow, y barrido luminoso), `.btn-secondary` (gris metalizado templado para cerrar/volver), y `.btn-danger` (rojo reactivo para retirada).
+  5. Remodelé el modal de Desbloqueos en `MainMenuScene.ts` para que simule una consola de reclutamiento táctica con scrollbars de rejilla oscura y tarjetas tipo credencial ID con pulsos neón de estado e imágenes ensombrecidas/desaturadas para los bloqueados.
+  6. Rediseñé las cartas de unidad en `BattleUI.ts` (`buildCard`) para simular microchips tácticos que se elevan y brillan al estar listos/hover, con barras de carga segmentadas.
+  7. Adapté la selección de unidades y habilidades en combate (`BattleUI.ts`) para usar bordes gruesos de color verde o rojo brillante en lugar de la propiedad `outline`.
+  8. Adapté la creación de botones de `ResultScene.ts` (`makeButton`) para dibujar placas metálicas biseladas de radio 2 con transiciones reactivas de escala en hover/pointer events.
+  9. Modifiqué los botones de cerrar modales en `MapScene.ts` para usar la clase `.btn-secondary`.
+- **Motivo:** Cumplir con la solicitud del usuario de cambiar todos los botones y menús básicos por un diseño premium de calidad AAA usando el logotipo de referencia.
+- **Riesgos:** Ninguno. Todo el flujo de menús e interactividad funciona correctamente y los assets cargan de forma nativa.
+- **Cómo probar:** `npm run build` y `npm run test` (pasan OK); abrir el juego localmente, observar el menú principal y probar los botones "DESBLOQUEOS" y "CONFIGURACIÓN"; jugar un combate, pasar el cursor por las cartas listas y seleccionar una; pausar y observar los sliders; ganar/perder un combate para comprobar la escena de resultados.
+- **Estado:** ✅ Completado y verificado. Build y tests en verde.
+
 ## 2026-06-16 — Antigravity (combat pause & volume config overlay)
 - **Objetivo:** Implementar la pausa suave de combate y el control de configuración de volúmenes en el menú principal y pantalla de batalla.
 - **Archivos:** `src/scenes/MainMenuScene.ts`, `src/ui/BattleUI.ts`, `src/scenes/BattleScene.ts`, `docs/ai-coordination/{AI_HANDOFF,CHANGELOG_AI,NEXT_ACTIONS,BUGS_AND_TECH_DEBT}.md`.

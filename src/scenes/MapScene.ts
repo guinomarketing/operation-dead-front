@@ -715,7 +715,7 @@ export class MapScene extends Phaser.Scene {
     itemsDiv.appendChild(recruitRow);
 
     const closeBtn = document.createElement('button');
-    closeBtn.className = 'btn-primary';
+    closeBtn.className = 'btn-secondary';
     closeBtn.innerText = 'SALIR DE LA ESTACIÓN';
     closeBtn.onclick = () => {
       this.runState.visitedNodeIds.push(this.runState.currentNodeId!);
@@ -911,11 +911,10 @@ export class MapScene extends Phaser.Scene {
     title.style.margin = '0';
 
     const closeBtn = document.createElement('button');
-    closeBtn.className = 'btn-primary';
+    closeBtn.className = 'btn-secondary';
     closeBtn.style.padding = '6px 16px';
     closeBtn.style.fontSize = '12px';
     closeBtn.innerText = 'CERRAR';
-    closeBtn.style.boxShadow = 'none';
     closeBtn.onclick = () => {
       overlay.remove();
     };

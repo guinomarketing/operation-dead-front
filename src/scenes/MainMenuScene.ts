@@ -51,51 +51,51 @@ export class MainMenuScene extends Phaser.Scene {
     const menuDiv = document.createElement('div');
     menuDiv.id = 'main-menu-ui';
 
-    const title = document.createElement('h1');
-    title.innerHTML = 'PATAGONIA<br/>Z';
+    // Logotipo Premium generado
+    const logo = document.createElement('img');
+    logo.src = '/assets/ui/logo.png';
+    logo.className = 'menu-logo';
+    logo.alt = 'Patagonia Z';
 
-    const subtitle = document.createElement('p');
-    subtitle.innerText = 'La Patagonia no se entrega.\nSostené la línea. Enterralos de nuevo.';
-    subtitle.style.fontSize = '1.2rem';
-    subtitle.style.color = '#ccc';
-    subtitle.style.textAlign = 'center';
-    subtitle.style.marginBottom = '3rem';
-    subtitle.style.fontStyle = 'italic';
-    subtitle.style.textShadow = '0 2px 4px rgba(0,0,0,0.8)';
+    // Subtítulo tipo Briefing
+    const subtitle = document.createElement('div');
+    subtitle.className = 'briefing-subtitle';
+    subtitle.innerHTML = `<p style="margin: 0; font-size: 1.15rem; color: #b6c4b2; text-align: center; font-style: italic; text-shadow: 0 2px 4px rgba(0,0,0,0.9); line-height: 1.35; letter-spacing: 0.5px;">
+      La Patagonia no se entrega.<br/>Sostené la línea. Enterralos de nuevo.
+    </p>`;
+
+    // Consola de Comandos (Contenedor de Botones)
+    const consoleDiv = document.createElement('div');
+    consoleDiv.className = 'briefing-console';
 
     const startBtn = document.createElement('button');
     startBtn.className = 'btn-primary';
     startBtn.innerText = 'DESPLEGAR';
-    startBtn.style.padding = '16px 48px';
-    startBtn.style.fontSize = '1.8rem';
-    
+    startBtn.style.padding = '14px 44px';
+    startBtn.style.fontSize = '1.6rem';
+    startBtn.style.width = '260px';
     startBtn.onclick = () => { Audio2.unlock(); Audio2.play('uiClick'); this.startGame(menuDiv); };
 
     const unlockBtn = document.createElement('button');
-    unlockBtn.className = 'btn-primary';
+    unlockBtn.className = 'btn-secondary';
     unlockBtn.innerText = '★ DESBLOQUEOS';
-    unlockBtn.style.marginTop = '14px';
-    unlockBtn.style.padding = '10px 28px';
-    unlockBtn.style.fontSize = '1.1rem';
-    unlockBtn.style.background = '#2a2a24';
+    unlockBtn.style.width = '240px';
     unlockBtn.style.color = '#f0d070';
     unlockBtn.onclick = () => { Audio2.unlock(); Audio2.play('uiClick'); this.openUnlocksOverlay(); };
 
     const configBtn = document.createElement('button');
-    configBtn.className = 'btn-primary';
+    configBtn.className = 'btn-secondary';
     configBtn.innerText = '⚙ CONFIGURACIÓN';
-    configBtn.style.marginTop = '14px';
-    configBtn.style.padding = '10px 28px';
-    configBtn.style.fontSize = '1.1rem';
-    configBtn.style.background = '#2a2a2d';
-    configBtn.style.color = '#ffffff';
+    configBtn.style.width = '240px';
     configBtn.onclick = () => { Audio2.unlock(); Audio2.play('uiClick'); this.openConfigOverlay(); };
 
-    menuDiv.appendChild(title);
+    consoleDiv.appendChild(startBtn);
+    consoleDiv.appendChild(unlockBtn);
+    consoleDiv.appendChild(configBtn);
+
+    menuDiv.appendChild(logo);
     menuDiv.appendChild(subtitle);
-    menuDiv.appendChild(startBtn);
-    menuDiv.appendChild(unlockBtn);
-    menuDiv.appendChild(configBtn);
+    menuDiv.appendChild(consoleDiv);
 
     this.uiContainer.appendChild(menuDiv);
   }
@@ -106,19 +106,22 @@ export class MainMenuScene extends Phaser.Scene {
     const menu = document.getElementById('main-menu-ui');
     if (menu) menu.style.visibility = 'hidden';
     const overlay = document.createElement('div');
+    overlay.className = 'glass-panel';
     Object.assign(overlay.style, {
-      position: 'absolute', inset: '0', background: 'rgba(8,10,8,0.62)', zIndex: '300',
-      pointerEvents: 'auto', display: 'flex', flexDirection: 'column', padding: '18px 22px', boxSizing: 'border-box',
+      position: 'absolute', inset: '40px 60px', background: 'rgba(12,16,12,0.96)', zIndex: '300',
+      pointerEvents: 'auto', display: 'flex', flexDirection: 'column', padding: '20px 24px', boxSizing: 'border-box',
+      border: '2px solid #3c4a35', boxShadow: '0 0 30px rgba(0,0,0,0.95), 0 0 10px rgba(94, 224, 58, 0.1)'
     } as CSSStyleDeclaration);
 
     const render = () => {
       overlay.innerHTML = '';
       const header = document.createElement('div');
-      Object.assign(header.style, { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #3f3f3f', paddingBottom: '10px', marginBottom: '12px' } as CSSStyleDeclaration);
+      Object.assign(header.style, { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #2d3824', paddingBottom: '10px', marginBottom: '12px' } as CSSStyleDeclaration);
       const h = document.createElement('div');
-      h.innerHTML = `<span style="font-family:var(--font-title); font-size:22px; color:var(--primary);">CUARTEL · DESBLOQUEOS</span> <span style="color:#f0d070; font-family:var(--font-title); margin-left:14px;">★ ${MetaProgression.getMedals()} medallas</span>`;
+      h.innerHTML = `<span style="font-family:var(--font-title); font-size:22px; color:var(--primary); text-shadow: 0 0 8px rgba(245,158,11,0.2);">CUARTEL · RECLUTAMIENTO</span> <span style="color:#f0d070; font-family:var(--font-title); margin-left:14px; text-shadow: 0 0 5px rgba(240,208,112,0.2);">★ ${MetaProgression.getMedals()} medallas</span>`;
+      
       const close = document.createElement('button');
-      close.className = 'btn-primary'; close.innerText = 'VOLVER'; close.style.padding = '6px 16px'; close.style.fontSize = '12px';
+      close.className = 'btn-secondary'; close.innerText = 'VOLVER'; close.style.padding = '6px 16px'; close.style.fontSize = '12px';
       close.onclick = () => {
         Audio2.play('uiClick');
         overlay.remove();
@@ -130,38 +133,76 @@ export class MainMenuScene extends Phaser.Scene {
 
       const sub = document.createElement('div');
       sub.innerText = 'Empezás cada campaña con el Conscripto. Gastá medallas (ganadas al ganar combates y completar runs) para sumar nuevas clases a tu plantel inicial.';
-      Object.assign(sub.style, { color: '#aaa', fontSize: '12px', marginBottom: '12px' } as CSSStyleDeclaration);
+      Object.assign(sub.style, { color: '#8fa08b', fontSize: '12px', marginBottom: '12px', fontFamily: 'var(--font-body)', letterSpacing: '0.5px' } as CSSStyleDeclaration);
       overlay.appendChild(sub);
 
       const grid = document.createElement('div');
-      Object.assign(grid.style, { flex: '1', overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px', alignContent: 'start' } as CSSStyleDeclaration);
+      Object.assign(grid.style, { flex: '1', overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', alignContent: 'start', paddingRight: '6px' } as CSSStyleDeclaration);
 
       for (const entry of UNLOCK_CATALOG) {
         const def = UNIT_INDEX[entry.id];
         if (!def) continue;
         const unlocked = MetaProgression.isUnlocked(entry.id);
         const medals = MetaProgression.getMedals();
+        
         const card = document.createElement('div');
         card.className = 'glass-panel';
-        Object.assign(card.style, { padding: '8px', display: 'flex', gap: '8px', alignItems: 'center', opacity: unlocked ? '1' : '0.92' } as CSSStyleDeclaration);
+        Object.assign(card.style, {
+          padding: '10px', display: 'flex', gap: '10px', alignItems: 'center',
+          background: unlocked ? 'linear-gradient(180deg, #1c2717 0%, #0c1208 100%)' : 'linear-gradient(180deg, #181c18 0%, #0a0d0a 100%)',
+          border: unlocked ? '1px solid #3c4a2d' : '1px solid #222c1f',
+          transition: 'all 0.2s ease',
+          boxShadow: unlocked ? '0 2px 6px rgba(0,0,0,0.5)' : 'none'
+        } as CSSStyleDeclaration);
+
+        // Hover effect on ID card
+        card.onmouseover = () => {
+          if (unlocked) {
+            card.style.border = '1px solid #5ee03a';
+            card.style.boxShadow = '0 0 10px rgba(94,224,58,0.2)';
+          } else {
+            card.style.border = '1px solid #d4a843';
+          }
+        };
+        card.onmouseout = () => {
+          card.style.border = unlocked ? '1px solid #3c4a2d' : '1px solid #222c1f';
+          card.style.boxShadow = unlocked ? '0 2px 6px rgba(0,0,0,0.5)' : 'none';
+        };
 
         const img = document.createElement('img');
         img.src = `/assets/sprites/unit-${entry.id}.png`;
-        Object.assign(img.style, { height: '56px', width: 'auto', objectFit: 'contain', filter: unlocked ? 'none' : 'grayscale(0.7) brightness(0.7)' } as CSSStyleDeclaration);
+        Object.assign(img.style, {
+          height: '60px', width: 'auto', objectFit: 'contain',
+          filter: unlocked ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.6))' : 'grayscale(1) contrast(1.1) brightness(0.4) opacity(0.6)',
+          transition: 'filter 0.2s ease'
+        } as CSSStyleDeclaration);
         img.onerror = () => { img.style.display = 'none'; };
 
         const info = document.createElement('div'); info.style.flex = '1';
-        info.innerHTML = `<div style="font-weight:bold; color:#fff; font-size:13px;">${def.name}</div><div style="font-size:10px; color:#9aa08c; text-transform:uppercase;">${def.role}</div>`;
-        const act = document.createElement('div'); act.style.marginTop = '5px';
+        info.innerHTML = `<div style="font-weight:bold; color:${unlocked ? '#e8e6d8' : '#778074'}; font-size:13px; font-family:var(--font-body); letter-spacing:0.5px;">${def.name}</div><div style="font-size:10px; color:${unlocked ? '#9aa08c' : '#555e53'}; text-transform:uppercase; font-family:var(--font-body); margin-top:2px;">${def.role}</div>`;
+        
+        const act = document.createElement('div'); act.style.marginTop = '6px';
         if (unlocked) {
-          act.innerHTML = `<span style="color:#5fbf5a; font-size:11px; font-weight:bold;">✔ DISPONIBLE</span>`;
+          act.innerHTML = `<span style="color:#5ee03a; font-size:11px; font-weight:bold; font-family:var(--font-title); letter-spacing:0.5px; text-shadow: 0 0 5px rgba(94,224,58,0.3);">✔ DISPONIBLE</span>`;
         } else {
           const b = document.createElement('button');
-          b.className = 'btn-primary'; b.style.padding = '4px 10px'; b.style.fontSize = '11px';
+          b.className = 'btn-primary'; b.style.padding = '5px 12px'; b.style.fontSize = '10px';
           b.innerText = `★ ${entry.cost}`;
           const can = medals >= entry.cost;
-          if (!can) { b.disabled = true; b.style.opacity = '0.5'; }
-          b.onclick = () => { if (MetaProgression.unlock(entry.id)) { Audio2.play('victory'); render(); } else { Audio2.play('uiClick'); } };
+          if (!can) {
+            b.disabled = true;
+            b.style.opacity = '0.4';
+            b.style.cursor = 'not-allowed';
+            b.style.boxShadow = 'none';
+          }
+          b.onclick = () => {
+            if (MetaProgression.unlock(entry.id)) {
+              Audio2.play('victory');
+              render();
+            } else {
+              Audio2.play('uiClick');
+            }
+          };
           act.appendChild(b);
         }
         info.appendChild(act);
@@ -214,19 +255,19 @@ export class MainMenuScene extends Phaser.Scene {
     const overlay = document.createElement('div');
     overlay.className = 'glass-panel';
     Object.assign(overlay.style, {
-      position: 'absolute', inset: '60px 80px', background: 'rgba(15,18,15,0.95)', zIndex: '300',
-      pointerEvents: 'auto', display: 'flex', flexDirection: 'column', padding: '24px 30px', boxSizing: 'border-box',
-      border: '2px solid var(--panel-border)', boxShadow: '5px 5px 0px rgba(0,0,0,0.8)'
+      position: 'absolute', inset: '60px 100px', background: 'rgba(12,16,12,0.96)', zIndex: '300',
+      pointerEvents: 'auto', display: 'flex', flexDirection: 'column', padding: '20px 24px', boxSizing: 'border-box',
+      border: '2px solid #3c4a35', boxShadow: '0 0 30px rgba(0,0,0,0.95), 0 0 10px rgba(94, 224, 58, 0.1)'
     } as CSSStyleDeclaration);
 
     const header = document.createElement('div');
-    Object.assign(header.style, { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #3f3f3f', paddingBottom: '10px', marginBottom: '20px' } as CSSStyleDeclaration);
+    Object.assign(header.style, { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #2d3824', paddingBottom: '10px', marginBottom: '20px' } as CSSStyleDeclaration);
     
     const h = document.createElement('div');
-    h.innerHTML = `<span style="font-family:var(--font-title); font-size:22px; color:var(--primary);">CENTRO DE OPERACIONES · AUDIO</span>`;
+    h.innerHTML = `<span style="font-family:var(--font-title); font-size:22px; color:var(--primary); text-shadow: 0 0 8px rgba(245,158,11,0.2);">CENTRO DE OPERACIONES · AUDIO</span>`;
     
     const close = document.createElement('button');
-    close.className = 'btn-primary'; close.innerText = 'VOLVER'; close.style.padding = '6px 16px'; close.style.fontSize = '12px';
+    close.className = 'btn-secondary'; close.innerText = 'VOLVER'; close.style.padding = '6px 16px'; close.style.fontSize = '12px';
     close.onclick = () => {
       Audio2.play('uiClick');
       overlay.remove();
@@ -244,7 +285,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // MÚSICA
     const musicRow = document.createElement('div');
-    musicRow.innerHTML = `<div style="font-family:var(--font-title); font-size:14px; color:#aaa; margin-bottom:6px;">VOLUMEN MÚSICA</div>`;
+    musicRow.innerHTML = `<div style="font-family:var(--font-title); font-size:13px; color:#8fa08b; margin-bottom:6px; letter-spacing:0.5px;">VOLUMEN MÚSICA</div>`;
     const musicSliderContainer = document.createElement('div');
     musicSliderContainer.style.display = 'flex';
     musicSliderContainer.style.alignItems = 'center';
@@ -263,6 +304,7 @@ export class MainMenuScene extends Phaser.Scene {
     musicVal.style.fontSize = '16px';
     musicVal.style.width = '40px';
     musicVal.style.textAlign = 'right';
+    musicVal.style.color = '#fff';
     musicVal.innerText = `${musicSlider.value}%`;
 
     musicSlider.oninput = () => {
@@ -278,7 +320,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // SFX
     const sfxRow = document.createElement('div');
-    sfxRow.innerHTML = `<div style="font-family:var(--font-title); font-size:14px; color:#aaa; margin-bottom:6px;">VOLUMEN EFECTOS (SFX)</div>`;
+    sfxRow.innerHTML = `<div style="font-family:var(--font-title); font-size:13px; color:#8fa08b; margin-bottom:6px; letter-spacing:0.5px;">VOLUMEN EFECTOS (SFX)</div>`;
     const sfxSliderContainer = document.createElement('div');
     sfxSliderContainer.style.display = 'flex';
     sfxSliderContainer.style.alignItems = 'center';
@@ -297,6 +339,7 @@ export class MainMenuScene extends Phaser.Scene {
     sfxVal.style.fontSize = '16px';
     sfxVal.style.width = '40px';
     sfxVal.style.textAlign = 'right';
+    sfxVal.style.color = '#fff';
     sfxVal.innerText = `${sfxSlider.value}%`;
 
     let lastPlay = 0;
@@ -337,8 +380,9 @@ export class MainMenuScene extends Phaser.Scene {
     muteLabel.htmlFor = 'cfg-mute';
     muteLabel.innerText = 'SILENCIAR TODO';
     muteLabel.style.fontFamily = 'var(--font-title)';
-    muteLabel.style.fontSize = '14px';
+    muteLabel.style.fontSize = '13px';
     muteLabel.style.cursor = 'pointer';
+    muteLabel.style.color = '#e8e6d8';
 
     muteCheckbox.onchange = () => {
       Audio2.toggleMute();

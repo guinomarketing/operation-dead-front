@@ -234,43 +234,59 @@ export class BattleUI {
   private buildCard(unitId: string, def: any, parent: HTMLElement): CardRef {
     const card = document.createElement('div'); card.className = 'glass-panel unit-card';
     Object.assign(card.style, {
-      width: '80px', height: '106px', flexShrink: '0', position: 'relative', cursor: 'pointer',
-      overflow: 'hidden', borderRadius: '5px', border: '2px solid #07090d',
-      background: 'linear-gradient(180deg, #33402a 0%, #161c12 100%)',
-      transition: 'transform 0.1s, box-shadow 0.1s', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)',
+      width: '82px', height: '110px', flexShrink: '0', position: 'relative', cursor: 'pointer',
+      overflow: 'hidden', borderRadius: '4px', border: '2px solid #2d3824',
+      background: 'linear-gradient(180deg, #182214 0%, #080c06 100%)',
+      transition: 'all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)',
     } as CSSStyleDeclaration);
     card.onmousedown = () => card.style.transform = 'scale(0.95)';
     card.onmouseup = () => { card.style.transform = 'scale(1)'; this.onSelectCard(unitId); };
-    card.onmouseleave = () => card.style.transform = 'scale(1)';
+    
+    // Hover effects
+    card.onmouseover = () => {
+      if (this.selectedUnitId !== unitId) {
+        card.style.transform = 'translateY(-3px)';
+        card.style.boxShadow = '0 6px 12px rgba(0,0,0,0.8), 0 0 10px rgba(94, 224, 58, 0.3)';
+        card.style.border = '2px solid #3c4e33';
+      }
+    };
+    card.onmouseleave = () => {
+      if (this.selectedUnitId !== unitId) {
+        card.style.transform = 'translateY(0)';
+        card.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)';
+        card.style.border = '2px solid #2d3824';
+      }
+    };
 
     const icon = document.createElement('img');
     const key = `unit-${unitId}`;
     try { icon.src = this.scene.textures.exists(key) ? this.scene.textures.getBase64(key) : `/assets/sprites/unit-${unitId}.png`; }
     catch (e) { icon.src = `/assets/sprites/unit-${unitId}.png`; }
     icon.draggable = false;
-    Object.assign(icon.style, { position: 'absolute', top: '3px', left: '50%', transform: 'translateX(-50%)', height: '84px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.6))' } as CSSStyleDeclaration);
+    Object.assign(icon.style, { position: 'absolute', top: '4px', left: '50%', transform: 'translateX(-50%)', height: '86px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.7))' } as CSSStyleDeclaration);
 
     // Coste (sol + número)
     const cost = document.createElement('div');
-    Object.assign(cost.style, { position: 'absolute', top: '2px', left: '2px', display: 'flex', alignItems: 'center', gap: '2px', padding: '1px 4px 1px 2px', background: 'rgba(0,0,0,0.6)', borderRadius: '3px', zIndex: '3' } as CSSStyleDeclaration);
-    const coin = this.img(`${UI}/icon-sun.png`, 13);
+    Object.assign(cost.style, { position: 'absolute', top: '3px', left: '3px', display: 'flex', alignItems: 'center', gap: '2px', padding: '1px 5px', background: 'rgba(6,10,6,0.85)', border: '1px solid #3c4a2d', borderRadius: '2px', zIndex: '3' } as CSSStyleDeclaration);
+    const coin = this.img(`${UI}/icon-sun.png`, 12);
     const costEl = document.createElement('span'); costEl.innerText = String(def.cost);
-    Object.assign(costEl.style, { fontFamily: 'var(--font-title)', fontSize: '12px', color: 'var(--primary)' } as CSSStyleDeclaration);
+    Object.assign(costEl.style, { fontFamily: 'var(--font-title)', fontSize: '11px', color: 'var(--primary)', letterSpacing: '0.5px' } as CSSStyleDeclaration);
     cost.appendChild(coin); cost.appendChild(costEl);
 
     // Nombre
     const name = document.createElement('div'); name.innerText = def.name;
-    Object.assign(name.style, { position: 'absolute', bottom: '5px', left: '0', width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '9px', fontWeight: '700', textAlign: 'center', color: '#fff', lineHeight: '1.05', background: 'linear-gradient(0deg, rgba(0,0,0,0.92) 30%, rgba(0,0,0,0) 100%)', zIndex: '3' } as CSSStyleDeclaration);
+    Object.assign(name.style, { position: 'absolute', bottom: '5px', left: '0', width: '100%', boxSizing: 'border-box', padding: '2px 4px', fontSize: '9px', fontWeight: '700', textAlign: 'center', color: '#e8e6d8', fontFamily: 'var(--font-body)', letterSpacing: '0.5px', lineHeight: '1.05', background: 'linear-gradient(0deg, rgba(4,6,4,0.96) 40%, rgba(4,6,4,0) 100%)', zIndex: '3' } as CSSStyleDeclaration);
 
     // Barra de carga (cooldown) abajo
     const chargeTrack = document.createElement('div');
-    Object.assign(chargeTrack.style, { position: 'absolute', bottom: '0', left: '0', width: '100%', height: '4px', background: '#0a0c08', zIndex: '4' } as CSSStyleDeclaration);
+    Object.assign(chargeTrack.style, { position: 'absolute', bottom: '0', left: '0', width: '100%', height: '4px', background: '#060806', zIndex: '4' } as CSSStyleDeclaration);
     const chargeFill = document.createElement('div');
-    Object.assign(chargeFill.style, { height: '100%', width: '100%', background: 'linear-gradient(90deg,#3b82f6,#7db4ff)', transition: 'width 0.1s linear' } as CSSStyleDeclaration);
+    Object.assign(chargeFill.style, { height: '100%', width: '100%', background: 'linear-gradient(90deg,#5ee03a,#bbf7d0)', transition: 'width 0.1s linear' } as CSSStyleDeclaration);
     chargeTrack.appendChild(chargeFill);
 
     const cdOverlay = document.createElement('div');
-    Object.assign(cdOverlay.style, { position: 'absolute', bottom: '0', left: '0', width: '100%', height: '100%', backgroundColor: 'rgba(4,6,3,0.72)', transformOrigin: 'bottom', transform: 'scaleY(0)', pointerEvents: 'none', zIndex: '2' } as CSSStyleDeclaration);
+    Object.assign(cdOverlay.style, { position: 'absolute', bottom: '0', left: '0', width: '100%', height: '100%', backgroundColor: 'rgba(6,10,6,0.78)', transformOrigin: 'bottom', transform: 'scaleY(0)', pointerEvents: 'none', zIndex: '2' } as CSSStyleDeclaration);
 
     card.appendChild(icon); card.appendChild(cdOverlay); card.appendChild(cost); card.appendChild(name); card.appendChild(chargeTrack);
     parent.appendChild(card);
@@ -280,35 +296,51 @@ export class BattleUI {
   private buildAbility(ab: { id: string, label: string, icon: string, cost: number }, parent: HTMLElement): AbilityRef {
     const btn = document.createElement('div'); btn.className = 'glass-panel';
     Object.assign(btn.style, {
-      width: '88px', height: '78px', position: 'relative', cursor: 'pointer', overflow: 'hidden',
-      borderRadius: '5px', border: '2px solid #07090d', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'flex-start', paddingTop: '4px', gap: '2px',
-      background: 'linear-gradient(180deg, #3a3326 0%, #16140d 100%)',
-      transition: 'transform 0.1s, box-shadow 0.1s', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)',
+      width: '92px', height: '82px', position: 'relative', cursor: 'pointer', overflow: 'hidden',
+      borderRadius: '4px', border: '2px solid #2d3824', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'flex-start', paddingTop: '5px', gap: '2px',
+      background: 'linear-gradient(180deg, #2a2012 0%, #0f0b06 100%)',
+      transition: 'all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)',
     } as CSSStyleDeclaration);
     btn.onmousedown = () => btn.style.transform = 'scale(0.95)';
     btn.onmouseup = () => { btn.style.transform = 'scale(1)'; this.onSelectAbility(ab.id); };
-    btn.onmouseleave = () => btn.style.transform = 'scale(1)';
+    
+    // Hover effects
+    btn.onmouseover = () => {
+      if (this.selectedAbilityId !== ab.id) {
+        btn.style.transform = 'translateY(-3px)';
+        btn.style.boxShadow = '0 6px 12px rgba(0,0,0,0.8), 0 0 10px rgba(220, 38, 38, 0.3)';
+        btn.style.border = '2px solid #4a3424';
+      }
+    };
+    btn.onmouseleave = () => {
+      if (this.selectedAbilityId !== ab.id) {
+        btn.style.transform = 'translateY(0)';
+        btn.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)';
+        btn.style.border = '2px solid #2d3824';
+      }
+    };
 
     btn.appendChild(this.img(ab.icon, 38));
     const lab = document.createElement('div'); lab.innerText = ab.label;
-    Object.assign(lab.style, { fontSize: '9px', fontWeight: '700', color: '#fff', textAlign: 'center' } as CSSStyleDeclaration);
+    Object.assign(lab.style, { fontSize: '9px', fontWeight: '700', color: '#e8e6d8', fontFamily: 'var(--font-body)', letterSpacing: '0.5px', textAlign: 'center' } as CSSStyleDeclaration);
     btn.appendChild(lab);
     const cost = document.createElement('div');
-    Object.assign(cost.style, { display: 'flex', alignItems: 'center', gap: '2px' } as CSSStyleDeclaration);
+    Object.assign(cost.style, { display: 'flex', alignItems: 'center', gap: '2px', padding: '1px 5px', background: 'rgba(6,6,6,0.6)', borderRadius: '2px' } as CSSStyleDeclaration);
     cost.appendChild(this.img(`${UI}/icon-sun.png`, 12));
     const costEl = document.createElement('span'); costEl.innerText = String(ab.cost);
-    Object.assign(costEl.style, { fontFamily: 'var(--font-title)', fontSize: '12px', color: 'var(--primary)' } as CSSStyleDeclaration);
+    Object.assign(costEl.style, { fontFamily: 'var(--font-title)', fontSize: '11px', color: 'var(--primary)', letterSpacing: '0.5px' } as CSSStyleDeclaration);
     cost.appendChild(costEl); btn.appendChild(cost);
 
     const chargeTrack = document.createElement('div');
-    Object.assign(chargeTrack.style, { position: 'absolute', bottom: '0', left: '0', width: '100%', height: '4px', background: '#0a0c08', zIndex: '4' } as CSSStyleDeclaration);
+    Object.assign(chargeTrack.style, { position: 'absolute', bottom: '0', left: '0', width: '100%', height: '4px', background: '#060806', zIndex: '4' } as CSSStyleDeclaration);
     const chargeFill = document.createElement('div');
-    Object.assign(chargeFill.style, { height: '100%', width: '100%', background: 'linear-gradient(90deg,#d97706,#fbbf24)', transition: 'width 0.1s linear' } as CSSStyleDeclaration);
+    Object.assign(chargeFill.style, { height: '100%', width: '100%', background: 'linear-gradient(90deg,#e05e3a,#f7bbb0)', transition: 'width 0.1s linear' } as CSSStyleDeclaration);
     chargeTrack.appendChild(chargeFill);
 
     const cdOverlay = document.createElement('div');
-    Object.assign(cdOverlay.style, { position: 'absolute', bottom: '0', left: '0', width: '100%', height: '100%', backgroundColor: 'rgba(4,6,3,0.72)', transformOrigin: 'bottom', transform: 'scaleY(0)', pointerEvents: 'none', zIndex: '2' } as CSSStyleDeclaration);
+    Object.assign(cdOverlay.style, { position: 'absolute', bottom: '0', left: '0', width: '100%', height: '100%', backgroundColor: 'rgba(6,6,6,0.78)', transformOrigin: 'bottom', transform: 'scaleY(0)', pointerEvents: 'none', zIndex: '2' } as CSSStyleDeclaration);
 
     btn.appendChild(cdOverlay); btn.appendChild(chargeTrack);
     parent.appendChild(btn);
@@ -407,10 +439,22 @@ export class BattleUI {
     this.selectedUnitId = unitId;
     this.selectedAbilityId = null;
     this.deployCatcher.style.pointerEvents = unitId ? 'auto' : 'none';
-    for (const b of Object.values(this.abilityButtons)) { b.el.style.outline = 'none'; b.el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)'; }
+    for (const b of Object.values(this.abilityButtons)) {
+      b.el.style.border = '2px solid #2d3824';
+      b.el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)';
+      b.el.style.transform = 'translateY(0)';
+    }
     for (const [id, c] of Object.entries(this.cards)) {
-      if (id === unitId) { c.el.style.outline = '2px solid #fbbf24'; c.el.style.boxShadow = '0 0 14px rgba(251,191,36,0.9)'; c.el.style.opacity = '1'; }
-      else { c.el.style.outline = 'none'; c.el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)'; }
+      if (id === unitId) {
+        c.el.style.border = '2px solid #5ee03a';
+        c.el.style.boxShadow = '0 0 14px rgba(94, 224, 58, 0.9)';
+        c.el.style.opacity = '1';
+        c.el.style.transform = 'translateY(-4px)';
+      } else {
+        c.el.style.border = '2px solid #2d3824';
+        c.el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)';
+        c.el.style.transform = 'translateY(0)';
+      }
     }
   }
 
@@ -418,10 +462,22 @@ export class BattleUI {
     this.selectedAbilityId = abilityId;
     this.selectedUnitId = null;
     this.deployCatcher.style.pointerEvents = abilityId ? 'auto' : 'none';
-    for (const c of Object.values(this.cards)) { c.el.style.outline = 'none'; c.el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)'; }
+    for (const c of Object.values(this.cards)) {
+      c.el.style.border = '2px solid #2d3824';
+      c.el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)';
+      c.el.style.transform = 'translateY(0)';
+    }
     for (const [id, b] of Object.entries(this.abilityButtons)) {
-      if (id === abilityId) { b.el.style.outline = '2px solid #ef4444'; b.el.style.boxShadow = '0 0 14px rgba(239,68,68,0.9)'; b.el.style.opacity = '1'; }
-      else { b.el.style.outline = 'none'; b.el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)'; }
+      if (id === abilityId) {
+        b.el.style.border = '2px solid #dc2626';
+        b.el.style.boxShadow = '0 0 14px rgba(220, 38, 38, 0.9)';
+        b.el.style.opacity = '1';
+        b.el.style.transform = 'translateY(-4px)';
+      } else {
+        b.el.style.border = '2px solid #2d3824';
+        b.el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 6px rgba(0,0,0,0.6)';
+        b.el.style.transform = 'translateY(0)';
+      }
     }
   }
 

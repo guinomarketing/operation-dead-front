@@ -1254,16 +1254,16 @@ export class BattleScene extends Phaser.Scene {
         overlay.className = 'glass-panel';
         Object.assign(overlay.style, {
           position: 'absolute',
-          inset: '50px 80px',
-          background: 'rgba(15,18,15,0.95)',
+          inset: '60px 100px',
+          background: 'rgba(12,16,12,0.96)',
           zIndex: '300',
           pointerEvents: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          padding: '20px 25px',
+          padding: '20px 24px',
           boxSizing: 'border-box',
-          border: '2px solid var(--panel-border)',
-          boxShadow: '5px 5px 0px rgba(0,0,0,0.8)'
+          border: '2px solid #3c4a35',
+          boxShadow: '0 0 30px rgba(0,0,0,0.95), 0 0 10px rgba(94, 224, 58, 0.1)'
         } as CSSStyleDeclaration);
 
         // Header
@@ -1272,13 +1272,13 @@ export class BattleScene extends Phaser.Scene {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: '2px solid #3f3f3f',
+          borderBottom: '2px solid #2d3824',
           paddingBottom: '8px',
           marginBottom: '15px'
         } as CSSStyleDeclaration);
 
         const titleSpan = document.createElement('div');
-        titleSpan.innerHTML = `<span style="font-family:var(--font-title); font-size:22px; color:var(--primary);">BATALLA EN PAUSA</span>`;
+        titleSpan.innerHTML = `<span style="font-family:var(--font-title); font-size:22px; color:var(--primary); text-shadow: 0 0 8px rgba(245,158,11,0.2);">BATALLA EN PAUSA</span>`;
         header.appendChild(titleSpan);
         overlay.appendChild(header);
 
@@ -1293,7 +1293,7 @@ export class BattleScene extends Phaser.Scene {
 
         // Slider Música
         const musicRow = document.createElement('div');
-        musicRow.innerHTML = `<div style="font-family:var(--font-title); font-size:13px; color:#aaa; margin-bottom:4px;">VOLUMEN MÚSICA</div>`;
+        musicRow.innerHTML = `<div style="font-family:var(--font-title); font-size:13px; color:#8fa08b; margin-bottom:4px; letter-spacing:0.5px;">VOLUMEN MÚSICA</div>`;
         const musicSliderContainer = document.createElement('div');
         Object.assign(musicSliderContainer.style, { display: 'flex', alignItems: 'center', gap: '15px' });
 
@@ -1306,7 +1306,7 @@ export class BattleScene extends Phaser.Scene {
         musicSlider.style.accentColor = 'var(--primary)';
 
         const musicVal = document.createElement('span');
-        Object.assign(musicVal.style, { fontFamily: 'var(--font-title)', fontSize: '15px', width: '40px', textAlign: 'right' });
+        Object.assign(musicVal.style, { fontFamily: 'var(--font-title)', fontSize: '15px', width: '40px', textAlign: 'right', color: '#fff' });
         musicVal.innerText = `${musicSlider.value}%`;
 
         musicSlider.oninput = () => {
@@ -1322,7 +1322,7 @@ export class BattleScene extends Phaser.Scene {
 
         // Slider SFX
         const sfxRow = document.createElement('div');
-        sfxRow.innerHTML = `<div style="font-family:var(--font-title); font-size:13px; color:#aaa; margin-bottom:4px;">VOLUMEN EFECTOS (SFX)</div>`;
+        sfxRow.innerHTML = `<div style="font-family:var(--font-title); font-size:13px; color:#8fa08b; margin-bottom:4px; letter-spacing:0.5px;">VOLUMEN EFECTOS (SFX)</div>`;
         const sfxSliderContainer = document.createElement('div');
         Object.assign(sfxSliderContainer.style, { display: 'flex', alignItems: 'center', gap: '15px' });
 
@@ -1335,7 +1335,7 @@ export class BattleScene extends Phaser.Scene {
         sfxSlider.style.accentColor = 'var(--primary)';
 
         const sfxVal = document.createElement('span');
-        Object.assign(sfxVal.style, { fontFamily: 'var(--font-title)', fontSize: '15px', width: '40px', textAlign: 'right' });
+        Object.assign(sfxVal.style, { fontFamily: 'var(--font-title)', fontSize: '15px', width: '40px', textAlign: 'right', color: '#fff' });
         sfxVal.innerText = `${sfxSlider.value}%`;
 
         let lastPlay = 0;
@@ -1372,7 +1372,7 @@ export class BattleScene extends Phaser.Scene {
         const muteLabel = document.createElement('label');
         muteLabel.htmlFor = 'pause-cfg-mute';
         muteLabel.innerText = 'SILENCIAR TODO';
-        Object.assign(muteLabel.style, { fontFamily: 'var(--font-title)', fontSize: '13px', cursor: 'pointer' });
+        Object.assign(muteLabel.style, { fontFamily: 'var(--font-title)', fontSize: '13px', cursor: 'pointer', color: '#e8e6d8' });
 
         muteCheckbox.onchange = () => {
           Audio2.toggleMute();
@@ -1395,7 +1395,7 @@ export class BattleScene extends Phaser.Scene {
         } as CSSStyleDeclaration);
 
         const resumeBtn = document.createElement('button');
-        resumeBtn.className = 'btn-primary';
+        resumeBtn.className = 'btn-secondary';
         resumeBtn.innerText = 'REANUDAR';
         Object.assign(resumeBtn.style, { flex: '1', fontSize: '14px', padding: '10px 15px' });
         resumeBtn.onclick = () => {
@@ -1404,15 +1404,12 @@ export class BattleScene extends Phaser.Scene {
         };
 
         const retreatBtn = document.createElement('button');
-        retreatBtn.className = 'btn-primary';
+        retreatBtn.className = 'btn-danger';
         retreatBtn.innerText = 'RETIRARSE';
         Object.assign(retreatBtn.style, {
           flex: '1',
           fontSize: '14px',
-          padding: '10px 15px',
-          background: '#c0392b',
-          color: '#fff',
-          border: '2px solid #5a1410'
+          padding: '10px 15px'
         });
         retreatBtn.onclick = () => {
           Audio2.play('uiClick');

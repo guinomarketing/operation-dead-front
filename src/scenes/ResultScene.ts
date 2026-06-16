@@ -432,24 +432,25 @@ export class ResultScene extends Phaser.Scene {
 
   private makeButton(x: number, y: number, label: string, onClick: () => void, fill: number): void {
     const w = 240;
-    const h = 72;
+    const h = 56;
     const container = this.add.container(x, y);
 
     const bg = this.add.graphics();
+    // Metal plate background with sharp bevel (radius 2)
     bg.fillStyle(fill, 1);
-    bg.fillRoundedRect(-w/2, -h/2, w, h, 8);
-    bg.lineStyle(2, COLORS.metalLight, 0.6);
-    bg.strokeRoundedRect(-w/2, -h/2, w, h, 8);
+    bg.fillRoundedRect(-w/2, -h/2, w, h, 2);
+    bg.lineStyle(2, COLORS.metalFrame, 0.95);
+    bg.strokeRoundedRect(-w/2, -h/2, w, h, 2);
 
-    // Inner shadow
-    bg.fillStyle(0x000000, 0.3);
-    bg.fillRoundedRect(-w/2, 0, w, h/2, { tl: 0, tr: 0, bl: 8, br: 8 });
+    // Inner shadow/gradient simulation
+    bg.fillStyle(0x000000, 0.28);
+    bg.fillRoundedRect(-w/2, 0, w, h/2, { tl: 0, tr: 0, bl: 2, br: 2 });
 
     const txt = this.add.text(0, 0, label, {
       fontFamily: FONTS.title,
-      fontSize: '28px',
+      fontSize: '24px',
       color: hex(COLORS.textWhite),
-      shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 2, fill: true }
+      shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 3, fill: true }
     }).setOrigin(0.5);
 
     container.add([bg, txt]);
@@ -459,9 +460,20 @@ export class ResultScene extends Phaser.Scene {
 
     const zone = this.add.zone(x, y, w, h).setInteractive({ useHandCursor: true });
     
-    zone.on('pointerdown', () => this.tweens.add({ targets: container, scale: 0.95, duration: 60 }));
+    zone.on('pointerover', () => {
+      this.tweens.add({ targets: container, scale: 1.04, duration: 120, ease: 'Cubic.easeOut' });
+      txt.setColor(hex(COLORS.gold));
+    });
+    
+    zone.on('pointerout', () => {
+      this.tweens.add({ targets: container, scale: 1, duration: 120, ease: 'Cubic.easeOut' });
+      txt.setColor(hex(COLORS.textWhite));
+    });
+    
+    zone.on('pointerdown', () => this.tweens.add({ targets: container, scale: 0.96, duration: 60 }));
+    
     zone.on('pointerup', () => {
-      this.tweens.add({ targets: container, scale: 1, duration: 60 });
+      this.tweens.add({ targets: container, scale: 1.04, duration: 60 });
       onClick();
     });
   }
