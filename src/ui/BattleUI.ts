@@ -300,6 +300,7 @@ export class BattleUI {
     allyHp: number; allyMaxHp: number; enemyHp: number; enemyMaxHp: number;
     cooldowns: Map<string, number>; morale: number;
     roster?: any[]; deployedSoldierIds?: Set<string>;
+    unitCosts?: Map<string, number>; deployCooldowns?: Map<string, number>;
     wave?: { current: number; total: number };
   }) {
     this.suppliesEl.innerText = Math.floor(state.supplies).toString();
@@ -333,11 +334,14 @@ export class BattleUI {
         available = total - cls.filter(s => state.deployedSoldierIds!.has(s.id)).length;
       }
       card.nameEl.innerText = `${def.name} (${available})`;
-      const affordable = state.supplies >= def.cost && available > 0;
+      const cost = state.unitCosts?.get(unitId) ?? def.cost;
+      card.costEl.innerText = String(cost);
+      const affordable = state.supplies >= cost && available > 0;
       card.costEl.style.color = affordable ? 'var(--primary)' : '#ef4444';
 
       const cd = state.cooldowns.get(unitId) ?? 0;
-      const pct = cd > 0 ? cd / def.deployCooldown : 0;
+      const cooldownMax = state.deployCooldowns?.get(unitId) ?? def.deployCooldown;
+      const pct = cd > 0 ? Math.min(1, cd / cooldownMax) : 0;
       card.cdOverlay.style.transform = `scaleY(${pct})`;
       card.chargeFill.style.width = `${(1 - pct) * 100}%`;
       card.chargeFill.style.background = cd > 0 ? 'linear-gradient(90deg,#475569,#94a3b8)' : 'linear-gradient(90deg,#3b82f6,#7db4ff)';

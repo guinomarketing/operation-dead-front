@@ -15,7 +15,7 @@ export const BOSSES: BossDef[] = [
     description:
       'Un robusto coronel reanimado con una gabardina militar desgarrada y una prótesis hidráulica oxidada.',
     stats: {
-      maxHp: 1200, damage: 35, attackInterval: 2400, range: 40, moveSpeed: 12, armor: 3,
+      maxHp: 900, damage: 30, attackInterval: 2400, range: 40, moveSpeed: 12, armor: 3,
       aoeRadius: 90,
     },
     bounty: 100,
@@ -27,13 +27,13 @@ export const BOSSES: BossDef[] = [
     phases: [
       {
         untilHpPct: 70,
-        description: 'Ordena desde atrás: invoca 3 Zombis del Cóndor cada 8 segundos.',
+        description: 'Ordena desde atras: invoca 2 Zombis del Condor cada 9 segundos.',
         abilities: [
           {
             id: 'summon',
-            cooldown: 8000,
-            description: 'Invoca 3 Zombis del Cóndor en la línea de spawn enemiga.',
-            params: { enemyId: 'revenant-grunt', count: 3 },
+            cooldown: 9000,
+            description: 'Invoca 2 Zombis del Condor en la linea de spawn enemiga.',
+            params: { enemyId: 'revenant-grunt', count: 2 },
           },
         ],
       },
@@ -43,24 +43,24 @@ export const BOSSES: BossDef[] = [
         abilities: [
           {
             id: 'summon',
-            cooldown: 8000,
-            description: 'Invoca 3 Zombis del Cóndor en la línea de spawn enemiga.',
-            params: { enemyId: 'revenant-grunt', count: 3 },
+            cooldown: 9000,
+            description: 'Invoca 2 Zombis del Condor en la linea de spawn enemiga.',
+            params: { enemyId: 'revenant-grunt', count: 2 },
           },
         ],
       },
       {
         untilHpPct: 0,
-        description: 'Furia de metal: invoca Infectados Veloces cada 5 segundos y aumenta su velocidad 30%.',
+        description: 'Furia de metal: invoca Infectados Veloces cada 8 segundos y aumenta su velocidad.',
         abilities: [
           {
             id: 'summon',
-            cooldown: 5000,
+            cooldown: 8000,
             description: 'Invoca 2 Infectados Veloces en la línea de spawn.',
             params: { enemyId: 'runner-corpse', count: 2 },
           },
         ],
-        statOverrides: { moveSpeed: 16 },
+        statOverrides: { moveSpeed: 14 },
       },
     ],
   },
@@ -91,6 +91,12 @@ export const BOSSES: BossDef[] = [
             params: { hpMult: 1.5, damageMult: 1.3 },
           },
           {
+            id: 'summon',
+            cooldown: 12000,
+            description: 'Libera un sujeto de prueba toxico desde la niebla del pueblo.',
+            params: { enemyId: 'toxic-carrier', count: 1 },
+          },
+          {
             id: 'heal-zone',
             cooldown: 12000,
             description: 'Derrame de suero: cura a las unidades de la secta 10 HP/s en un radio de 110px por 5s.',
@@ -107,6 +113,12 @@ export const BOSSES: BossDef[] = [
             cooldown: 7000,
             description: 'Muta a un enemigo: +50% HP máximo y +30% de daño.',
             params: { hpMult: 1.5, damageMult: 1.3 },
+          },
+          {
+            id: 'summon',
+            cooldown: 9000,
+            description: 'Libera un sujeto de prueba toxico desde la niebla del pueblo.',
+            params: { enemyId: 'toxic-carrier', count: 1 },
           },
           {
             id: 'heal-zone',
@@ -132,15 +144,15 @@ export const BOSSES: BossDef[] = [
     description:
       'Un tanque viviente ensamblado con chatarra pesada y cuerpos reanimados. Lento pero devastador.',
     stats: {
-      maxHp: 2000, damage: 50, attackInterval: 6000, range: 200, moveSpeed: 6, armor: 8,
+      maxHp: 1600, damage: 45, attackInterval: 6000, range: 200, moveSpeed: 6, armor: 8,
       aoeRadius: 100,
     },
     abilities: [
       {
         id: 'cannon',
         cooldown: 6000,
-        description: 'Dispara su cañón de cadáveres: 50 de daño en un radio de 100px.',
-        params: { damage: 50, radius: 100 },
+        description: 'Dispara su canon de cadaveres: 44 de dano en un radio de 100px.',
+        params: { damage: 44, radius: 100 },
       },
     ],
     bounty: 100,
@@ -170,8 +182,8 @@ export const BOSSES: BossDef[] = [
           {
             id: 'cannon',
             cooldown: 4500,
-            description: 'Dispara su cañón de cadáveres: 50 de daño en un radio de 100px.',
-            params: { damage: 50, radius: 100 },
+            description: 'Dispara su canon de cadaveres: 44 de dano en un radio de 100px.',
+            params: { damage: 44, radius: 100 },
           },
         ],
       },

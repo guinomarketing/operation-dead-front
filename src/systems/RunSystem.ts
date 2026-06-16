@@ -2,6 +2,7 @@ import type { RunState, RunMapDef, RunNodeDef, NodeType, RunEffect, RosterSoldie
 import { BASES, MORALE } from '../utils/constants';
 import { MetaProgression } from './MetaProgression';
 import { OPERATION_INDEX } from '../data/operations';
+import { RELICS } from '../data/relics';
 import { createSeededRandom, randomInt, randomItem } from '../utils/SeededRandom';
 
 const NOMBRES = ['Juan', 'Esteban', 'Santiago', 'Ignacio', 'Facundo', 'Lautaro', 'Bautista', 'Mateo', 'Rodrigo', 'Lucas', 'Enzo', 'Lionel', 'Beto', 'Cacho', 'Tito', 'Gato', 'Charly', 'Diego', 'Lucho', 'Felipe'];
@@ -213,8 +214,12 @@ export class RunSystem {
         }
         break;
       case 'gain-relic':
-        if (effect.relicId && !state.relicIds.includes(effect.relicId)) {
-          state.relicIds.push(effect.relicId);
+        {
+          if (!state.relicIds) state.relicIds = [];
+          const relicId = effect.relicId || RunSystem.pickRandomRelicId(state);
+          if (relicId && !state.relicIds.includes(relicId)) {
+            state.relicIds.push(relicId);
+          }
         }
         break;
       case 'add-mutation':
@@ -237,5 +242,12 @@ export class RunSystem {
       default:
         break;
     }
+  }
+
+  private static pickRandomRelicId(state: RunState): string | undefined {
+    const owned = new Set(state.relicIds || []);
+    const available = RELICS.filter((relic) => !owned.has(relic.id));
+    if (available.length === 0) return undefined;
+    return randomItem(Math.random, available).id;
   }
 }

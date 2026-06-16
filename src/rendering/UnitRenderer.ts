@@ -66,6 +66,8 @@ export class UnitRenderer {
   private lastHp: number;
   private attackFlashTimer = 0;
   private hitFlashTimer = 0;
+  private specialTintTimer = 0;
+  private specialTint = 0xffffff;
   private spawned = false;
 
   readonly uid: number;
@@ -159,6 +161,7 @@ export class UnitRenderer {
 
   update(c: Combatant, delta: number): void {
     const groundY = FIELD.LANES_Y[c.lane];
+    const normalTint = this.getNormalTint(c);
 
     // ── Detección de movimiento (para la animación de marcha) ──
     const moved = Math.abs(c.x - this.lastX);
@@ -206,9 +209,12 @@ export class UnitRenderer {
       this.sprite.setTint(0xff5555);
     } else if (this.attackFlashTimer > 0) {
       this.attackFlashTimer -= delta;
-      if (this.attackFlashTimer <= 0) this.sprite.setTint(this.colorTint);
+      if (this.attackFlashTimer <= 0) this.sprite.setTint(normalTint);
+    } else if (this.specialTintTimer > 0) {
+      this.specialTintTimer -= delta;
+      this.sprite.setTint(this.specialTint);
     } else {
-      this.sprite.setTint(this.colorTint);
+      this.sprite.setTint(normalTint);
     }
 
     this.sprite.x = c.x + jitter;
@@ -217,7 +223,7 @@ export class UnitRenderer {
     this.sprite.scaleY = this.baseScaleY * squashY;
 
     if (this.frameAnimated) {
-      if (this.hitFlashTimer > 0) this.sprite.setFrame(5);
+      if (this.hitFlashTimer > 0 || this.specialTintTimer > 0) this.sprite.setFrame(5);
       else if (this.attackFlashTimer <= 0) this.sprite.setFrame(isMoving ? (Math.sin(this.walkPhase) > 0 ? 1 : 2) : 0);
     }
 
@@ -245,6 +251,67 @@ export class UnitRenderer {
     this.sprite.setTint(0xffffff);
     const recoil = this.faction === 'ally' ? -4 : 4;
     this.scene.tweens.add({ targets: this.sprite, x: this.sprite.x + recoil, duration: 60, yoyo: true, ease: 'Power2' });
+  }
+
+  playBossPhaseShift(phaseIndex: number): void {
+    const pulseTint = phaseIndex >= 2 ? 0xff5533 : 0xffaa44;
+    this.specialTint = pulseTint;
+    this.specialTintTimer = 760;
+    this.scene.tweens.add({
+      targets: this.sprite,
+      scaleX: this.baseScaleX * 1.18,
+      scaleY: this.baseScaleY * 1.18,
+      duration: 130,
+      yoyo: true,
+      repeat: 2,
+      ease: 'Sine.easeInOut',
+    });
+    this.scene.tweens.add({
+      targets: this.shadow,
+      scaleX: this.shadow.scaleX * 1.16,
+      scaleY: this.shadow.scaleY * 1.16,
+      alpha: 0.72,
+      duration: 160,
+      yoyo: true,
+      repeat: 2,
+    });
+  }
+
+  playBossAbilityCue(abilityId?: string): void {
+    const tintByAbility: Record<string, number> = {
+      summon: 0xffcc66,
+      mutate: COLORS.serumGlow,
+      'heal-zone': 0x77ff99,
+      cannon: COLORS.fireGlow,
+    };
+    this.specialTint = abilityId ? (tintByAbility[abilityId] ?? 0xffffff) : 0xffffff;
+    this.specialTintTimer = 420;
+    if (this.frameAnimated) this.sprite.setFrame(4);
+    this.scene.tweens.add({
+      targets: this.sprite,
+      scaleX: this.baseScaleX * 1.08,
+      scaleY: this.baseScaleY * 1.08,
+      duration: 90,
+      yoyo: true,
+      ease: 'Power2',
+    });
+  }
+
+  private getNormalTint(c: Combatant): number {
+    if (c.defId === 'general-eisenfaust') {
+      const hpPct = c.hp / c.maxHp;
+      if (hpPct <= 0.35) return lerpColor(this.colorTint, COLORS.fireGlow, 0.36);
+      if (hpPct <= 0.70) return lerpColor(this.colorTint, COLORS.warn, 0.25);
+    }
+    if (c.defId === 'doctor-totenkopf') {
+      const hpPct = c.hp / c.maxHp;
+      if (hpPct <= 0.30) return lerpColor(this.colorTint, COLORS.serumGlow, 0.45);
+      if (hpPct <= 0.60) return lerpColor(this.colorTint, 0x77ff99, 0.28);
+    }
+    if (c.defId === 'panzer-corpse-engine' && c.hp / c.maxHp <= 0.50) {
+      return lerpColor(this.colorTint, COLORS.fire, 0.32);
+    }
+    return this.colorTint;
   }
 
   playDeath(onComplete?: () => void): void {

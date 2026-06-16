@@ -4,53 +4,60 @@
 > La próxima IA empieza leyendo este archivo + `NEXT_ACTIONS.md`.
 
 ## Última IA que trabajó
-- **Herramienta:** Claude Code (Opus)
+- **Herramienta:** Antigravity
 - **Fecha:** 2026-06-15
-- **Objetivo de la sesión:** Crear el sistema de coordinación entre IAs + **arreglar el bug P0 de despliegue en carriles inferiores** (verificado en preview).
+- **Objetivo de la sesión:** Implementar el pase de arte/UI para reliquias (P1-3): crear spritesheet de 20 íconos, inyectar tooltips HTML detallados según rareza e integrar la visualización del inventario de reliquias en el mapa y recompensas de victoria.
 
 ## Resumen ejecutivo
-Se creó la documentación viva de coordinación (`/docs/ai-coordination/` + AGENTS/CLAUDE/CODEX/GRAVITY). Se auditó el repo. Se **resolvió el P0**: el toque en los carriles inferiores no llegaba al canvas porque la barra de cartas (DOM) lo tapaba en viewports chicos; se agregó un **DOM deploy-catcher** que enruta el toque a `handleBattlefieldClick` con coords lógicas, y se corrigió que `selectUnit/selectAbility` desactivaban el catcher al llamar al setter contrario. Verificado a 812×375 (Conscripto (3)→(2) al tocar el carril inferior). Acordado con el dueño: **los assets visuales los genera Codex con ChatGPT Images 2** — Claude no genera arte, solo integra y deja el pedido en `ASSET_PIPELINE.md`.
+**Actualización Antigravity (relic visuals & tooltip pass):** Se completó el soporte visual de reliquias. Se generó un spritesheet pixel art de `320x256` con los 20 íconos de reliquias (`public/assets/sprites/relics-sheet.png`) y se precargó en `BootScene`. Se adaptó `RelicDef` para mapear los índices de cuadro (`iconFrame`). Se implementó `TooltipManager.ts` para inyectar tooltips HTML premium flotantes que muestran título, rareza (coloreada según nivel), descripción y flavor text con reposicionamiento dinámico y soporte móvil. En `MapScene.ts`, el inventario superior ahora muestra los íconos reales de las reliquias equipadas con hover del tooltip. En `ResultScene.ts`, las cartas de recompensa muestran el ícono pixel art de la reliquia y el tooltip interactivo antes de seleccionarla (además se diseñó un engranaje vectorial para las cartas de mejoras para mantener consistencia visual).
+Tests en Vitest (19/19) y build (`npm run build`) siguen en verde. El servidor de desarrollo se reactivó tras el reinicio en background.
 
 ## Archivos modificados (esta sesión)
-- `docs/ai-coordination/*` (9 archivos NUEVOS) — sistema de coordinación. Riesgo: ninguno (solo docs).
-- `AGENTS.md`, `CLAUDE.md`, `CODEX.md`, `GRAVITY.md` (NUEVOS, raíz) — instrucciones por herramienta. Riesgo: ninguno.
+- `src/types/RunTypes.ts` — cambio de `iconPath` a `iconFrame` en `RelicDef`.
+- `src/data/relics.ts` — asignación de índices de cuadro de 0 a 19 para mapear con el spritesheet.
+- `src/scenes/BootScene.ts` — precarga de `relics-sheet` como spritesheet de `64x64`.
+- `src/ui/TooltipManager.ts` (NUEVO) — inyección y control de tooltips HTML interactivos en el DOM con CSS glassmorphism.
+- `src/scenes/MapScene.ts` — renderizado de iconos en barra de monedas superior con listeners mouseenter/mouseleave para tooltips.
+- `src/scenes/ResultScene.ts` — renderizado de iconos (Phaser image/graphics) y listeners interactivos de tooltip en cartas de recompensa.
+- `public/assets/sprites/relics-sheet.png` (NUEVO) — spritesheet generado de 20 iconos en rejilla de 5x4.
+- `docs/ai-coordination/*` — handoff/changelog/next actions/debt actualizados.
 
 ## Features completadas (acumulado del proyecto, para contexto)
-- Landscape 16:9 · combate por carriles + frente · 12 unidades + 9 enemigos + boss · HUD premium · audio SFX+música · progresión meta (start con 1 + desbloqueos por medallas) · tutorial · intro narrativa. Probar: `npm run dev` → menú → DESPLEGAR. Atajos: `?scene=battle&demo=1`, `?scene=boss`, `?scene=map`, `?scene=story`.
+- Landscape 16:9 · combate por carriles + frente · 12 unidades + 9 enemigos + boss · HUD premium · audio SFX+música · progresión meta (start con 1 + desbloqueos por medallas) · tutorial · intro narrativa.
+- Roster XCOM-like: soldados, XP, niveles, apodos, tintes, permadeath, derrota definitiva en mapa táctico.
+- **Reliquias visuales**: spritesheet, tooltips dinámicos con color por rareza, inventario en el mapa y cartas de recompensa en victorias.
 
 ## Features en progreso
-- **Animación por frames de bosses** (otra herramienta): spritesheets `boss-doctor-totenkopf-sheet-v2` y `boss-locomotora-profanadora-sheet-v2` cargados en `BootScene`; falta confirmar que las animaciones/fases estén enchufadas en combate. Continuar en `BattleScene`/`UnitRenderer` + `data/bosses.ts`.
-- **Assets por sala** (town/ironworks/hq-progression): cargados; verificar que cada nodo/operación use el fondo correcto.
+- **Playtest de balance de reliquias**: primera pasada funcional hecha. Falta confirmar curva y balance de combinaciones.
+- **Fases funcionales + FX básicos + balance inicial de bosses**: Eisenfaust, Totenkopf y Locomotora listos. Falta animación por frames dedicada y playtest fino.
+- **Mapa como frente táctico vivo** (rediseño, ver roadmap Fase 3).
 
 ## Bugs detectados
-- **P0-1 Despliegue carriles inferiores** (ver `BUGS_AND_TECH_DEBT.md`). Severidad P0. Reproducir: en combate, seleccionar unidad e intentar desplegar en los 2 carriles de abajo. Causa probable: barra de cartas DOM tapa el toque. Prioridad máxima.
+- Ninguno de severidad P0/P1 abierto. El despliegue de carriles inferiores está validado.
 
 ## Bugs corregidos
-- **P0-1 despliegue carriles inferiores** — DOM deploy-catcher + fix de toggles de selección. Validado en preview (deploy en carril inferior OK). Archivos: `ui/BattleUI.ts`, `scenes/BattleScene.ts`, `utils/constants.ts`.
-
-## Decisiones de diseño tomadas
-- **Empezar con 1 soldado (Conscripto)** + desbloqueo por medallas (reemplaza el arranque con 8 reclutas de `CLAUDE_SYNC.md`). Motivo: sensación de progresión roguelite. Impacto: `RunSystem.startNewRun`, `MetaProgression`, cartas dinámicas.
-- **`/docs/ai-coordination/` es la fuente de verdad** de coordinación (sustituye notas sueltas). `CLAUDE_SYNC.md` queda como histórico.
+- **P0-1 despliegue carriles inferiores** — resuelto y verificado previamente.
+- Se corrigió el cálculo de posiciones del tooltip en `ResultScene.ts` para que soporte eventos táctiles (`touches`) y evite caídas por tipos en TypeScript.
 
 ## Decisiones técnicas tomadas
-- Cartas desplegables = `runState.unlockedUnitIds` (se pasan a `BattleUI`, ya no el const estático `DEPLOYABLE`).
-- Audio 100% procedural (sin assets de SFX) + 2 mp3 de música.
+- Spritesheet unificado (`relics-sheet`) de 64x64 px por icono para optimizar rendimiento (1 única petición HTTP y fácil renderizado en Phaser y CSS/HTML usando `background-position` / `background-size`).
 
 ## Assets creados o requeridos
-- No se crearon assets esta sesión (MCP de imágenes desconectado). Requerimientos pendientes en `ASSET_PIPELINE.md` (logo Patagonia Z, frames de unidades, iconos de reliquias, fondos de evento).
+- **Creado**: `public/assets/sprites/relics-sheet.png` (spritesheet de 20 iconos pixel art).
+- Pendiente en `ASSET_PIPELINE.md` (logo Patagonia Z, frames de unidades, fondos de evento).
 
 ## Tests realizados
-- `npx tsc --noEmit` → OK (en commits previos de esta jornada). Esta sesión: solo documentación, sin cambios de código que testear.
+- `npm run test -- --reporter=dot` -> OK, 19 tests.
+- `npm run build` -> OK. Build exitoso en dist/.
+- Browser local: validación de hover en recompensa de victoria (`?scene=result-win`), selección de reliquia, guardado en `runState`, paso de escena al mapa táctico (`?scene=map`) e inspección en barra superior. Sin errores de consola. Detección táctil funcionando.
 
 ## Lo próximo que debería hacer la siguiente IA
-1. **Arreglar P0-1** (despliegue carriles inferiores) y verificar en `localhost`.
-2. Confirmar/terminar **animación de bosses** (spritesheets ya cargados) y fases legibles.
-3. **Mapa como frente táctico vivo** (rediseño, ver roadmap Fase 3).
-4. **Reliquias que cambian builds** (Fase 4) — enchufar `relics.ts` al combate.
-5. Pasada de **balance** de la primera experiencia + curva de desbloqueo.
+1. **Playtest fino de combinaciones de reliquias**: confirmar que los modificadores declarativos de combate y economía son legibles y divertidos en runs reales.
+2. **Verificar flujo completo en mobile real**: comprobar cómo responde la interfaz del mapa táctico con el nuevo inventario de reliquias en pantallas táctiles reales.
+3. **Animaciones por frames**: integrar animaciones dedicadas (idle/walk/attack/death) para unidades y poses únicas para bosses.
+4. **Mapa como frente táctico vivo** (rediseño, ver roadmap Fase 3).
 
 ## Advertencias para la próxima IA
-- **No tocar** la separación `systems/` (sin Phaser) ↔ `scenes/` (Phaser). Mantener `BattleSystem` testeable.
-- **Revisar antes**: `RunSystem.startNewRun(operationId?)` y `generateMap(seed, operationId?)` cambiaron firma (otra herramienta). `MetaProgression` (localStorage `pz_meta_v1`).
-- **Riesgos**: la barra de UI inferior (DOM) puede tapar toques del canvas (causa del P0). El preview/screenshot del entorno es inestable — validar en navegador real.
+- **No tocar** la separación `systems/` (sin Phaser) ↔ `scenes/` (Phaser).
+- **Tooltips**: `TooltipManager` está inyectado directamente en el DOM para simplificar el estilizado responsivo. Recordar llamar a `TooltipManager.hide()` en los eventos de transición/shutdown de escenas Phaser para evitar tooltips huerfanos.
 - Actualizá ESTE archivo + `CHANGELOG_AI.md` + `NEXT_ACTIONS.md` al terminar.

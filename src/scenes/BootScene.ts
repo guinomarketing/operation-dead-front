@@ -49,6 +49,11 @@ export class BootScene extends Phaser.Scene {
       frameWidth: 362,
       frameHeight: 413,
     });
+    // Reliquias
+    this.load.spritesheet('relics-sheet', 'assets/sprites/relics-sheet.png', {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
   }
 
   create(): void {

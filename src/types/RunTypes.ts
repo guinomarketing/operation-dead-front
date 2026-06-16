@@ -62,6 +62,7 @@ export interface RelicDef {
   rarity: Rarity;
   description: string;
   flavor?: string;
+  iconFrame?: number;
   modifiers?: Modifier[];
   hooks?: HookId[];
 }

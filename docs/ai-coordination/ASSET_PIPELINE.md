@@ -39,7 +39,7 @@ Nota: lo ya integrado usa keys cortas (`unit-rifleman.png`, `enemy-revenant-grun
 
 ## Assets FALTANTES (prioridad)
 - **P0:** (ninguno nuevo bloquea; el P0 es un bug de código).
-- **P1:** frames de animación de unidades (idle/walk/attack/death); confirmar/llenar fases de bosses; iconos de reliquias; fondos/composición de "frente táctico vivo" para el mapa.
+- **P1:** frames de animación de unidades (idle/walk/attack/death); poses/clips polish de bosses sobre FX básicos ya integrados (Totenkopf mutación/curación, Locomotora cannon/summons, Eisenfaust transición de furia); iconos de reliquias (ya hay recompensas y efectos funcionales, falta identidad visual por reliquia); fondos/composición de "frente táctico vivo" para el mapa.
 - **P2:** logo real **Patagonia Z**; panel de UI (marco card 9-slice), tooltips; pantalla de evento (ilustración 2 columnas); música boss/evento/victoria/derrota.
 - **P3:** skins/variantes de tropas; splash/loading; screenshots Play Store; icono de app.
 

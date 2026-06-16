@@ -7,8 +7,11 @@ import { UNIT_INDEX } from '../data/units';
 import { ENEMY_INDEX } from '../data/enemies';
 import { BOSS_INDEX } from '../data/bosses';
 import { OPERATION_INDEX } from '../data/operations';
+import { RELIC_INDEX } from '../data/relics';
 import { WaveSystem } from './WaveSystem';
 import type { NodeType, BattleMode, RosterSoldier } from '../types/RunTypes';
+import type { BossPhase, EnemyAbility, EnemyStats } from '../types/EnemyTypes';
+import type { Modifier, StatKey, TargetFilter } from '../types/common';
 import { createSeededRandom } from '../utils/SeededRandom';
 
 export type Faction = 'ally' | 'enemy';
@@ -58,11 +61,23 @@ export interface BattleEvent {
   type: 'death' | 'bounty' | 'base-hit' | 'heal';
   faction?: Faction;
   amount?: number;
+  abilityId?: EnemyAbility['id'];
+  phaseIndex?: number;
   defId?: string;
   x?: number;
   y?: number;
   uid?: number;
 }
+
+interface ModifierSubject {
+  faction: Faction;
+  defId: string;
+  tags: string[];
+  role?: string;
+  tier?: string;
+}
+
+type CombatantDraft = Omit<Combatant, 'uid' | 'defId' | 'faction' | 'x' | 'lane' | 'hp' | 'attackCooldown' | 'alive'>;
 
 export class BattleSystem {
   combatants: Combatant[] = [];
@@ -73,6 +88,7 @@ export class BattleSystem {
   supplies: number;
   morale: number;
   activeUpgrades: string[] = [];
+  activeRelics: string[] = [];
   outcome: BattleOutcome = 'ongoing';
   waveSys: WaveSystem;
   nodeType: NodeType;
@@ -83,6 +99,12 @@ export class BattleSystem {
   private nextUid = 1;
   private incomeCarry = 0;
   private readonly seededRandom: () => number;
+  private activeModifiers: Modifier[] = [];
+  private activeHooks = new Set<string>();
+  private moraleFloorUsed = false;
+  private firstDeathSurviveUsed = false;
+  private enemyKillsForRelics = 0;
+  private freeDeployCharges = 0;
   pendingEvents: BattleEvent[] = [];
 
   constructor(
@@ -93,6 +115,7 @@ export class BattleSystem {
     bossId: string = 'general-eisenfaust',
     operationId: string = 'op-first-light',
     seed: string = 'battle',
+    activeRelics: string[] = [],
   ) {
     this.allyBaseHp = allyBaseHp;
     this.allyBaseMaxHp = allyBaseHp;
@@ -101,9 +124,14 @@ export class BattleSystem {
     this.bossId = BOSS_INDEX[bossId] ? bossId : 'general-eisenfaust';
     this.operationId = OPERATION_INDEX[operationId] ? operationId : 'op-first-light';
     this.seededRandom = createSeededRandom(`${seed}:${this.operationId}:${nodeType}:${battleMode}`);
-    this.supplies = ECONOMY.STARTING_SUPPLIES;
-    this.morale = MORALE.START;
     this.activeUpgrades = activeUpgrades;
+    this.activeRelics = activeRelics.filter((id) => !!RELIC_INDEX[id]);
+    this.activeModifiers = this.activeRelics.flatMap((id) => RELIC_INDEX[id].modifiers || []);
+    for (const id of this.activeRelics) {
+      for (const hook of RELIC_INDEX[id].hooks || []) this.activeHooks.add(hook);
+    }
+    this.supplies = this.getBattleStartingSupplies();
+    this.morale = this.getBattleStartMorale(MORALE.START);
     this.waveSys = new WaveSystem(this);
 
     if (nodeType === 'boss') {
@@ -120,6 +148,21 @@ export class BattleSystem {
 
   random(): number {
     return this.seededRandom();
+  }
+
+  getBattleStartMorale(baseMorale: number): number {
+    return Math.max(0, Math.min(MORALE.MAX, Math.round(this.applyModifiers('moraleStart', baseMorale))));
+  }
+
+  getUnitCost(unitId: string): number {
+    if (this.hasFreeDeployCharge()) return 0;
+    return this.getBaseUnitCost(unitId);
+  }
+
+  getDeployCooldown(unitId: string): number {
+    const def = UNIT_INDEX[unitId];
+    if (!def) return 0;
+    return Math.max(250, Math.round(this.applyModifiers('deployCooldown', def.deployCooldown, this.subjectForUnit(unitId))));
   }
 
   getWaveEnemyIds(): string[] {
@@ -155,13 +198,18 @@ export class BattleSystem {
 
   canAfford(unitId: string): boolean {
     const def = UNIT_INDEX[unitId];
-    return !!def && this.supplies >= def.cost;
+    return !!def && this.supplies >= this.getUnitCost(unitId);
   }
 
   spawnAlly(unitId: string, customLane?: number, soldier?: RosterSoldier): Combatant | null {
     const def = UNIT_INDEX[unitId];
-    if (!def || this.supplies < def.cost) return null;
-    this.supplies -= def.cost;
+    const cost = this.getUnitCost(unitId);
+    if (!def || this.supplies < cost) return null;
+    if (this.hasFreeDeployCharge()) {
+      this.freeDeployCharges--;
+    } else {
+      this.supplies -= cost;
+    }
 
     let maxHp = def.stats.maxHp;
     let damage = def.stats.damage;
@@ -257,20 +305,21 @@ export class BattleSystem {
     defId: string,
     faction: Faction,
     x: number,
-    s: Omit<Combatant, 'uid' | 'defId' | 'faction' | 'x' | 'lane' | 'hp' | 'attackCooldown' | 'alive'>,
+    s: CombatantDraft,
     customLane?: number,
   ): Combatant {
     const lane = customLane !== undefined ? customLane : this.leastBusyLane(faction);
+    const modified = this.applyCombatantModifiers(defId, faction, s);
     const c: Combatant = {
       uid: this.nextUid++,
       defId,
       faction,
       x,
       lane,
-      hp: s.maxHp,
+      hp: modified.maxHp,
       attackCooldown: 0,
       alive: true,
-      ...s,
+      ...modified,
     };
     this.combatants.push(c);
     return c;
@@ -299,7 +348,7 @@ export class BattleSystem {
     if (this.outcome !== 'ongoing') return;
 
     // Economía
-    this.incomeCarry += ECONOMY.INCOME_PER_SECOND * dt;
+    this.incomeCarry += this.getIncomePerSecond() * dt;
     if (this.incomeCarry >= 1) {
       const gained = Math.floor(this.incomeCarry);
       this.supplies += gained;
@@ -482,11 +531,11 @@ export class BattleSystem {
       this.pendingEvents.push({ type: 'base-hit', faction: 'ally', amount: baseDamage });
       
       const loss = (baseDamage / 10) * MORALE.BASE_HIT_PER_10_DMG;
-      this.morale = Math.max(0, this.morale - loss);
+      this.applyMoraleLoss(loss);
     }
   }
 
-  getModifiedDamage(attacker: Combatant): number {
+  getModifiedDamage(attacker: Combatant, target?: Combatant): number {
     let dmg = attacker.damage;
     if (attacker.faction === 'enemy') {
       // Check for Officer aura (+25% damage)
@@ -509,7 +558,15 @@ export class BattleSystem {
         dmg = Math.round(dmg * 1.20);
       }
     }
-    return dmg;
+    const subject = this.subjectForCombatant(attacker);
+    const targetSubject = target ? this.subjectForCombatant(target) : undefined;
+    dmg = this.applyModifiers('damage', dmg, subject, targetSubject);
+
+    if (attacker.faction === 'ally' && this.hasHook('low-base-rage') && this.allyBaseHp / this.allyBaseMaxHp <= 0.4) {
+      dmg *= 1.3;
+    }
+
+    return Math.max(1, Math.round(dmg));
   }
 
   getModifiedMoveSpeed(c: Combatant): number {
@@ -532,7 +589,7 @@ export class BattleSystem {
       return;
     }
 
-    const baseDmg = this.getModifiedDamage(attacker);
+    const baseDmg = this.getModifiedDamage(attacker, target);
     const dmg = Math.max(1, baseDmg - target.armor);
     target.hp -= dmg;
     
@@ -546,7 +603,7 @@ export class BattleSystem {
     }
     // Incendiary Burn
     if (attacker.traits.includes('burn')) {
-      target.burnRemaining = 2000;
+      target.burnRemaining = this.hasHook('ground-fire') ? 4000 : 2000;
       target.burnTickTimer = 1000;
     }
 
@@ -562,7 +619,7 @@ export class BattleSystem {
         
         const dist = Math.abs(o.x - primaryTarget.x);
         if (dist <= radius) {
-          const baseDmg = this.getModifiedDamage(attacker);
+          const baseDmg = this.getModifiedDamage(attacker, o);
           const dmg = Math.max(1, baseDmg - o.armor);
           o.hp -= dmg;
           if (o.hp <= 0) this.kill(o, attacker);
@@ -594,6 +651,10 @@ export class BattleSystem {
       return;
     }
 
+    if (this.preventFirstAllyDeath(c)) {
+      return;
+    }
+
     c.alive = false;
     if (c.defId === this.bossId) {
       this.enemyBaseHp = 0;
@@ -622,6 +683,10 @@ export class BattleSystem {
       const bounty = def?.bounty ?? 0;
       this.supplies += bounty;
       this.pendingEvents.push({ type: 'bounty', amount: bounty, defId: c.defId });
+      this.enemyKillsForRelics++;
+      if (this.hasHook('free-deploy-per-12-kills') && this.enemyKillsForRelics % 12 === 0) {
+        this.freeDeployCharges++;
+      }
 
       // Track kill on the attacker combatant if it is an ally
       if (attackerCombatant && attackerCombatant.faction === 'ally') {
@@ -641,7 +706,11 @@ export class BattleSystem {
         const def = UNIT_INDEX[c.defId];
         const cost = def?.cost ?? 0;
         const loss = MORALE.UNIT_DEATH_BASE + Math.floor(cost / 25);
-        this.morale = Math.max(0, this.morale - loss);
+        this.applyMoraleLoss(loss);
+      }
+      if (this.hasHook('salvage-on-death') && c.defId !== 'barricade') {
+        this.supplies += 10;
+        this.pendingEvents.push({ type: 'bounty', faction: 'ally', amount: 10, defId: c.defId });
       }
     }
   }
@@ -653,8 +722,21 @@ export class BattleSystem {
     }
 
     if (c.faction === 'ally') {
-      this.enemyBaseHp -= c.damage;
-      this.pendingEvents.push({ type: 'base-hit', faction: 'enemy', amount: c.damage });
+      if (this.nodeType === 'boss') {
+        const boss = this.combatants.find(o => o.alive && o.defId === this.bossId);
+        if (boss) {
+          const dmg = Math.max(1, this.getModifiedDamage(c, boss) - boss.armor);
+          boss.hp -= dmg;
+          this.enemyBaseHp = Math.max(0, boss.hp);
+          this.pendingEvents.push({ type: 'base-hit', faction: 'enemy', amount: dmg });
+          if (boss.hp <= 0) this.kill(boss, c);
+          return;
+        }
+      }
+
+      const dmg = this.getModifiedDamage(c);
+      this.enemyBaseHp -= dmg;
+      this.pendingEvents.push({ type: 'base-hit', faction: 'enemy', amount: dmg });
       if (this.enemyBaseHp <= 0) this.enemyBaseHp = 0;
     } else {
       this.allyBaseHp -= c.damage;
@@ -662,7 +744,7 @@ export class BattleSystem {
       if (this.allyBaseHp <= 0) this.allyBaseHp = 0;
       // Disminución de moral por golpe a la base
       const loss = (c.damage / 10) * MORALE.BASE_HIT_PER_10_DMG;
-      this.morale = Math.max(0, this.morale - loss);
+      this.applyMoraleLoss(loss);
     }
   }
 
@@ -693,12 +775,13 @@ export class BattleSystem {
   }
 
   castMedkit(x: number): void {
+    const healAmount = this.getModifiedHealAmount(40);
     for (const c of this.combatants) {
       if (c.alive && c.faction === 'ally' && c.defId !== 'barricade') {
         const dist = Math.abs(c.x - x);
         if (dist <= 120) {
-          c.hp = Math.min(c.maxHp, c.hp + 40);
-          this.pendingEvents.push({ type: 'heal', faction: 'ally', amount: 40 });
+          c.hp = Math.min(c.maxHp, c.hp + healAmount);
+          this.pendingEvents.push({ type: 'heal', faction: 'ally', amount: healAmount });
         }
       }
     }
@@ -713,65 +796,381 @@ export class BattleSystem {
   }
 
   updateBossPhases(dtMs: number): void {
-    if (this.bossId !== 'general-eisenfaust') return;
-    const boss = this.combatants.find(c => c.alive && c.defId === 'general-eisenfaust');
+    const bossDef = BOSS_INDEX[this.bossId];
+    if (!bossDef) return;
+    const boss = this.combatants.find(c => c.alive && c.defId === this.bossId);
     if (!boss) return;
 
     const hpPct = boss.hp / boss.maxHp;
-    let newPhase = 0; // Phase 1
-    if (hpPct <= 0.35) {
-      newPhase = 2; // Phase 3
-    } else if (hpPct <= 0.70) {
-      newPhase = 1; // Phase 2
-    }
+    const newPhase = this.getBossPhaseIndex(bossDef.phases, hpPct);
 
     if ((this as any).currentBossPhase === undefined) {
       (this as any).currentBossPhase = 0;
+      this.applyBossPhaseStats(boss, bossDef.stats, bossDef.phases[newPhase]);
     }
 
     const prevPhase = (this as any).currentBossPhase;
     if (newPhase !== prevPhase) {
       (this as any).currentBossPhase = newPhase;
-      // Trigger a phase transition event
+      this.applyBossPhaseStats(boss, bossDef.stats, bossDef.phases[newPhase]);
       this.pendingEvents.push({
         type: 'base-hit',
         faction: 'enemy',
-        amount: 999 // Special amount code for phase transition
+        amount: 999, // Special amount code for phase transition
+        defId: boss.defId,
+        uid: boss.uid,
+        x: boss.x,
+        y: FIELD.LANES_Y[boss.lane],
+        phaseIndex: newPhase,
       });
-
-      // Apply statOverrides
-      if (newPhase === 2) {
-        boss.moveSpeed = 16; // Speed up 30%
-      }
     }
 
-    // Update Boss Abilities Cooldown
-    if ((boss as any).bossAbilityCooldown === undefined) {
-      (boss as any).bossAbilityCooldown = 4000; // Start with 4s cooldown
+    const phaseAbilities = bossDef.phases[newPhase]?.abilities || [];
+    const baseAbilities = (bossDef.abilities || []).filter(
+      ability => !phaseAbilities.some(phaseAbility => phaseAbility.id === ability.id),
+    );
+
+    this.updateBossThresholdAbilities(boss, bossDef.phases, hpPct);
+    this.updateBossCooldownAbilities(boss, baseAbilities, dtMs, 'base');
+    this.updateBossCooldownAbilities(boss, phaseAbilities, dtMs, `phase-${newPhase}`);
+  }
+
+  private getBossPhaseIndex(phases: BossPhase[], hpPct: number): number {
+    let phaseIndex = 0;
+    for (let i = 0; i < phases.length - 1; i++) {
+      if (hpPct <= this.normalizeHpPct(phases[i].untilHpPct)) {
+        phaseIndex = i + 1;
+      }
+    }
+    return phaseIndex;
+  }
+
+  private normalizeHpPct(value: number): number {
+    return value > 1 ? value / 100 : value;
+  }
+
+  private applyBossPhaseStats(boss: Combatant, baseStats: EnemyStats, phase?: BossPhase): void {
+    const overrides = phase?.statOverrides || {};
+    boss.damage = overrides.damage ?? baseStats.damage;
+    boss.attackInterval = overrides.attackInterval ?? baseStats.attackInterval;
+    boss.range = overrides.range ?? baseStats.range;
+    boss.moveSpeed = overrides.moveSpeed ?? baseStats.moveSpeed;
+    boss.armor = overrides.armor ?? baseStats.armor;
+    boss.aoeRadius = overrides.aoeRadius ?? baseStats.aoeRadius;
+  }
+
+  private updateBossThresholdAbilities(boss: Combatant, phases: BossPhase[], hpPct: number): void {
+    const triggered = ((boss as any).bossTriggeredThresholds ??= {}) as Record<string, boolean>;
+    for (const phase of phases) {
+      for (const ability of phase.abilities || []) {
+        const thresholdStep = Number(ability.params?.onHpThresholdPct || 0);
+        if (!thresholdStep) continue;
+
+        for (let threshold = 100 - thresholdStep; threshold > 0; threshold -= thresholdStep) {
+          const key = `${ability.id}:${threshold}`;
+          if (triggered[key] || hpPct * 100 > threshold) continue;
+
+          triggered[key] = true;
+          this.castBossAbility(boss, ability);
+        }
+      }
+    }
+  }
+
+  private updateBossCooldownAbilities(boss: Combatant, abilities: EnemyAbility[], dtMs: number, groupKey: string): void {
+    const cooldowns = ((boss as any).bossAbilityCooldowns ??= {}) as Record<string, number>;
+    for (let i = 0; i < abilities.length; i++) {
+      const ability = abilities[i];
+      if (ability.params?.onHpThresholdPct) continue;
+      if (ability.cooldown <= 0) continue;
+
+      const key = `${groupKey}:${i}:${ability.id}:${ability.cooldown}`;
+      cooldowns[key] = (cooldowns[key] ?? this.getBossInitialAbilityDelay(ability, i)) - dtMs;
+      if (cooldowns[key] > 0) continue;
+
+      this.castBossAbility(boss, ability);
+      cooldowns[key] = ability.cooldown;
+    }
+  }
+
+  private getBossInitialAbilityDelay(ability: EnemyAbility, order: number): number {
+    const readableDelayByAbility: Record<EnemyAbility['id'], number> = {
+      summon: 4500,
+      mutate: 6500,
+      'heal-zone': 8500,
+      cannon: 5200,
+      fog: 5000,
+      revive: 7000,
+      detonate: 0,
+    };
+    const readableDelay = readableDelayByAbility[ability.id] + order * 400;
+    return Math.min(ability.cooldown, readableDelay);
+  }
+
+  private castBossAbility(boss: Combatant, ability: EnemyAbility): void {
+    if (ability.id === 'summon') {
+      this.castBossSummon(boss, ability);
+      return;
     }
 
-    (boss as any).bossAbilityCooldown -= dtMs;
-    if ((boss as any).bossAbilityCooldown <= 0) {
-      // Cast boss summon ability!
-      if (newPhase === 0 || newPhase === 1) {
-        // Summons 3 Revenant Grunts
-        for (let i = 0; i < 3; i++) {
-          this.spawnEnemy('revenant-grunt');
-        }
-        (boss as any).bossAbilityCooldown = 8000; // 8s cooldown
-      } else if (newPhase === 2) {
-        // Summons 2 Runner Corpses
-        for (let i = 0; i < 2; i++) {
-          this.spawnEnemy('runner-corpse');
-        }
-        (boss as any).bossAbilityCooldown = 5000; // 5s cooldown
-      }
-      // Trigger a summon visual event
+    if (ability.id === 'mutate') {
+      this.castBossMutate(boss, ability);
+      return;
+    }
+
+    if (ability.id === 'heal-zone') {
+      this.castBossHealZone(boss, ability);
+      return;
+    }
+
+    if (ability.id === 'cannon') {
+      this.castBossCannon(boss, ability);
+    }
+  }
+
+  private castBossSummon(boss: Combatant, ability: EnemyAbility): void {
+    const enemyId = String(ability.params?.enemyId || 'revenant-grunt');
+    const count = Number(ability.params?.count || 1);
+    for (let i = 0; i < count; i++) {
+      this.spawnEnemy(enemyId);
+    }
+    this.pendingEvents.push({
+      type: 'heal',
+      faction: 'enemy',
+      amount: 888, // Special amount code for boss summon
+      abilityId: 'summon',
+      defId: boss.defId,
+      uid: boss.uid,
+      x: FIELD.SPAWN_ENEMY_X,
+      y: FIELD.LANES_Y[boss.lane],
+    });
+  }
+
+  private castBossMutate(boss: Combatant, ability: EnemyAbility): void {
+    const candidates = this.combatants.filter(c =>
+      c.alive && c.faction === 'enemy' && c.uid !== boss.uid && !(c as any).bossMutated
+    );
+    const target = candidates[0];
+    if (!target) return;
+
+    const hpMult = Number(ability.params?.hpMult || 1);
+    const damageMult = Number(ability.params?.damageMult || 1);
+    target.maxHp = Math.round(target.maxHp * hpMult);
+    target.hp = Math.min(target.maxHp, Math.round(target.hp * hpMult));
+    target.damage = Math.round(target.damage * damageMult);
+    (target as any).bossMutated = true;
+    this.pendingEvents.push({
+      type: 'heal',
+      faction: 'enemy',
+      amount: 888,
+      abilityId: 'mutate',
+      defId: target.defId,
+      uid: target.uid,
+      x: target.x,
+      y: FIELD.LANES_Y[target.lane],
+    });
+  }
+
+  private castBossHealZone(boss: Combatant, ability: EnemyAbility): void {
+    const radius = Number(ability.params?.radius || 110);
+    const healPerSecond = Number(ability.params?.healPerSecond || 10);
+    const durationMs = Number(ability.params?.durationMs || 3000);
+    const amount = Math.max(1, Math.round(healPerSecond * (durationMs / 1000)));
+
+    let healed = false;
+    for (const c of this.combatants) {
+      if (!c.alive || c.faction !== 'enemy') continue;
+      if (Math.abs(c.lane - boss.lane) > 1) continue;
+      if (Math.abs(c.x - boss.x) > radius) continue;
+
+      const before = c.hp;
+      c.hp = Math.min(c.maxHp, c.hp + amount);
+      if (c.hp > before) healed = true;
+    }
+
+    if (healed) {
       this.pendingEvents.push({
         type: 'heal',
         faction: 'enemy',
-        amount: 888 // Special amount code for boss summon
+        amount,
+        abilityId: 'heal-zone',
+        defId: boss.defId,
+        uid: boss.uid,
+        x: boss.x,
+        y: FIELD.LANES_Y[boss.lane],
       });
     }
+  }
+
+  private castBossCannon(boss: Combatant, ability: EnemyAbility): void {
+    const target = this.findTarget(boss);
+    if (!target) return;
+
+    const radius = Number(ability.params?.radius || boss.aoeRadius || 100);
+    const damage = Number(ability.params?.damage || boss.damage);
+    for (const c of this.combatants) {
+      if (!c.alive || c.faction !== 'ally') continue;
+      if (Math.abs(c.lane - target.lane) > 1) continue;
+      if (Math.abs(c.x - target.x) > radius) continue;
+
+      c.hp -= Math.max(1, damage - c.armor);
+      if (c.hp <= 0) this.kill(c, boss);
+    }
+    this.pendingEvents.push({
+      type: 'base-hit',
+      faction: 'ally',
+      amount: 0,
+      abilityId: 'cannon',
+      defId: boss.defId,
+      uid: boss.uid,
+      x: target.x,
+      y: FIELD.LANES_Y[target.lane],
+    });
+  }
+
+  private getBattleStartingSupplies(): number {
+    let supplies = Math.round(this.applyModifiers('startingSupplies', ECONOMY.STARTING_SUPPLIES));
+    if (this.hasHook('supply-drop-start')) supplies += 60;
+    return Math.max(0, supplies);
+  }
+
+  private getIncomePerSecond(): number {
+    return Math.max(0, this.applyModifiers('incomeRate', ECONOMY.INCOME_PER_SECOND));
+  }
+
+  private getBaseUnitCost(unitId: string): number {
+    const def = UNIT_INDEX[unitId];
+    if (!def) return Infinity;
+    return Math.max(0, Math.round(this.applyModifiers('cost', def.cost, this.subjectForUnit(unitId))));
+  }
+
+  private hasFreeDeployCharge(): boolean {
+    return this.hasHook('free-deploy-per-12-kills') && this.freeDeployCharges > 0;
+  }
+
+  private getModifiedHealAmount(amount: number): number {
+    const subject: ModifierSubject = { faction: 'ally', defId: 'healing', tags: ['support'] };
+    return Math.max(1, Math.round(this.applyModifiers('healPower', amount, subject)));
+  }
+
+  private getMoraleLossMultiplier(): number {
+    return Math.max(0, this.applyModifiers('moraleLossMult', 1));
+  }
+
+  private applyMoraleLoss(rawLoss: number): void {
+    const loss = rawLoss * this.getMoraleLossMultiplier();
+    const nextMorale = this.morale - loss;
+    if (this.hasHook('morale-floor-once') && !this.moraleFloorUsed && nextMorale < 1) {
+      this.moraleFloorUsed = true;
+      this.morale = Math.min(MORALE.MAX, Math.max(1, this.morale) + 20);
+      return;
+    }
+    this.morale = Math.max(0, nextMorale);
+  }
+
+  private preventFirstAllyDeath(c: Combatant): boolean {
+    if (!this.hasHook('first-death-survives')) return false;
+    if (this.firstDeathSurviveUsed || c.faction !== 'ally' || c.defId === 'barricade') return false;
+    this.firstDeathSurviveUsed = true;
+    c.hp = 1;
+    c.alive = true;
+    this.pendingEvents.push({
+      type: 'heal',
+      faction: 'ally',
+      amount: 1,
+      defId: c.defId,
+      uid: c.uid,
+      x: c.x,
+      y: FIELD.LANES_Y[c.lane],
+    });
+    return true;
+  }
+
+  private hasHook(hookId: string): boolean {
+    return this.activeHooks.has(hookId);
+  }
+
+  private applyCombatantModifiers(defId: string, faction: Faction, draft: CombatantDraft): CombatantDraft {
+    const subject = this.subjectForDraft(defId, faction, draft.tags);
+    return {
+      ...draft,
+      maxHp: Math.max(1, Math.round(this.applyModifiers('maxHp', draft.maxHp, subject))),
+      attackInterval: Math.max(100, Math.round(this.applyModifiers('attackInterval', draft.attackInterval, subject))),
+      range: Math.max(0, Math.round(this.applyModifiers('range', draft.range, subject))),
+      moveSpeed: Math.max(0, this.applyModifiers('moveSpeed', draft.moveSpeed, subject)),
+      armor: Math.max(0, Math.round(this.applyModifiers('armor', draft.armor, subject))),
+      healPower: draft.healPower === undefined ? undefined : Math.max(1, Math.round(this.applyModifiers('healPower', draft.healPower, subject))),
+      healRadius: draft.healRadius === undefined ? undefined : Math.max(0, Math.round(this.applyModifiers('healRadius', draft.healRadius, subject))),
+      maxTargets: draft.maxTargets === undefined ? undefined : Math.max(1, Math.round(this.applyModifiers('maxTargets', draft.maxTargets, subject))),
+    };
+  }
+
+  private applyModifiers(stat: StatKey, baseValue: number, subject?: ModifierSubject, target?: ModifierSubject): number {
+    let value = baseValue;
+    for (const modifier of this.activeModifiers) {
+      if (modifier.stat !== stat) continue;
+      if (!this.modifierMatches(modifier.filter, subject, target)) continue;
+      value = modifier.op === 'mul' ? value * modifier.value : value + modifier.value;
+    }
+    return value;
+  }
+
+  private modifierMatches(filter: TargetFilter | undefined, subject?: ModifierSubject, target?: ModifierSubject): boolean {
+    if (!filter) return true;
+    if (!subject) return false;
+
+    if (filter.side && subject.faction !== filter.side) return false;
+    if (filter.unitIds && !filter.unitIds.includes(subject.defId)) return false;
+    if (filter.roles && !filter.roles.includes(subject.role || '')) return false;
+
+    if (filter.enemyIds) {
+      const subjectMatch = subject.faction === 'enemy' && filter.enemyIds.includes(subject.defId);
+      const targetMatch = !!target && target.faction === 'enemy' && filter.enemyIds.includes(target.defId);
+      if (!subjectMatch && !targetMatch) return false;
+    }
+
+    if (filter.tags) {
+      const subjectMatch = this.hasAllTags(subject, filter.tags);
+      const targetMatch = target ? this.hasAllTags(target, filter.tags) : false;
+      if (!subjectMatch && !targetMatch) return false;
+    }
+
+    if (filter.tiers) {
+      const subjectMatch = !!subject.tier && filter.tiers.includes(subject.tier);
+      const targetMatch = !!target?.tier && filter.tiers.includes(target.tier);
+      if (!subjectMatch && !targetMatch) return false;
+    }
+
+    return true;
+  }
+
+  private hasAllTags(subject: ModifierSubject, tags: string[]): boolean {
+    return tags.every((tag) => subject.tags.includes(tag));
+  }
+
+  private subjectForCombatant(c: Combatant): ModifierSubject {
+    return this.subjectForDraft(c.defId, c.faction, c.tags);
+  }
+
+  private subjectForUnit(unitId: string): ModifierSubject {
+    const def = UNIT_INDEX[unitId];
+    return {
+      faction: 'ally',
+      defId: unitId,
+      tags: def?.tags || [],
+      role: def?.role,
+    };
+  }
+
+  private subjectForDraft(defId: string, faction: Faction, tags: string[]): ModifierSubject {
+    const unit = faction === 'ally' ? UNIT_INDEX[defId] : undefined;
+    const enemy = faction === 'enemy' ? (ENEMY_INDEX[defId] || BOSS_INDEX[defId]) : undefined;
+    return {
+      faction,
+      defId,
+      tags,
+      role: unit?.role,
+      tier: enemy?.tier,
+    };
   }
 }

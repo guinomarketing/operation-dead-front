@@ -23,9 +23,22 @@ Estado: `abierto` / `en progreso` / `resuelto` / `no reproducible`.
 
 ## Debt P1-1 — Animaciones por frames ausentes
 - **Prioridad:** P1 · **Estado:** en progreso (parcial)
-- Unidades usan solo animación procedural. Hay spritesheets de boss cargados (`enemy-doctor-totenkopf`, `enemy-panzer-corpse-engine`) sin confirmar integración de fases/clips.
-- **Archivos:** `src/rendering/UnitRenderer.ts`, `src/scenes/BattleScene.ts`, `src/scenes/BootScene.ts`, `src/data/bosses.ts`.
+- Unidades usan solo animación procedural. Las fases de bosses ya funcionan en lógica pura y tienen FX básicos en `BattleScene`/`UnitRenderer`, pero todavía faltan ciclos por frame dedicados y poses/clips únicos para que se sientan comerciales.
+- **Archivos:** `src/rendering/UnitRenderer.ts`, `src/scenes/BattleScene.ts`, `src/scenes/BootScene.ts`, `src/data/bosses.ts`, `src/systems/BattleSystem.ts`.
 - **IA:** Codex (frames) + Claude Code (integración).
+
+## Debt P1-4 — Balance de bosses con habilidades activas
+- **Prioridad:** P1 · **Estado:** en progreso (primera pasada estructural hecha)
+- Totenkopf y Locomotora ahora ejecutan sus habilidades declaradas y muestran FX básicos. Primera pasada: Totenkopf invoca sujetos de prueba tóxicos, los cooldowns iniciales de boss están escalonados, y el banco automático full-roster valida que los 3 bosses sean ganables/legibles. Falta playtest humano para cooldowns finales, daño, claridad visual y curva de dificultad en mobile real.
+- **Archivos:** `src/data/bosses.ts`, `src/systems/BattleSystem.ts`, `src/systems/core.test.ts`.
+- **IA:** Claude Code / Codex.
+
+## Bug P1-5 — Ataques al extremo no dañaban al boss real
+- **Prioridad:** P1
+- **Estado:** ✅ RESUELTO 2026-06-15 (Codex).
+- **Problema:** en nodos boss, una unidad aliada que llegaba a `FIELD.ENEMY_BASE_X` bajaba `enemyBaseHp` como si fuera búnker, sin aplicar daño al combatiente boss. Eso podía desincronizar barra/fases.
+- **Solución:** `hitBase` redirige el daño al boss vivo cuando `nodeType === 'boss'` y sincroniza `enemyBaseHp = boss.hp`.
+- **Validación:** test `routes ally base attacks into the living boss during boss battles`.
 
 ## Debt P1-2 — Mapa no es "frente táctico vivo"
 - **Prioridad:** P1 · **Estado:** abierto
@@ -34,10 +47,11 @@ Estado: `abierto` / `en progreso` / `resuelto` / `no reproducible`.
 - **IA:** Codex (dirección visual) + Claude Code (sistema).
 
 ## Debt P1-3 — Reliquias sin impacto real
-- **Prioridad:** P1 · **Estado:** abierto
-- `src/data/relics.ts` existe pero las reliquias no cambian builds de forma significativa en combate.
-- **Archivos:** `src/data/relics.ts`, `src/systems/BattleSystem.ts`, `src/systems/RunSystem.ts`, `src/types/RunTypes.ts`.
-- **IA:** Claude Code (lógica) + Codex (iconos).
+- **Prioridad:** P1 · **Estado:** ✅ RESUELTO 2026-06-15 (Antigravity)
+- **Solución aplicada:** La integración funcional en combate fue hecha por Codex. Añadí spritesheet pixel art con los 20 iconos, inyección de tooltips flotantes HTML (`TooltipManager.ts`) con estilo premium y color por rareza, inventario visual dinámico en el mapa (MapScene) y visualización/interactividad en las cartas de recompensa (ResultScene).
+- **Pendiente:** Playtest de balance de combinaciones y rarezas en mobile. Las pasivas de comandantes y mutaciones aún no se aplican con la misma estructura general.
+- **Archivos:** `src/data/relics.ts`, `src/systems/BattleSystem.ts`, `src/systems/RunSystem.ts`, `src/scenes/ResultScene.ts`, `src/ui/BattleUI.ts`, `src/scenes/MapScene.ts`, `src/ui/TooltipManager.ts`, `src/systems/core.test.ts`.
+- **IA:** Claude Code / Antigravity.
 
 ## Debt P2-1 — Coordinación / docs divergentes
 - **Prioridad:** P2 · **Estado:** en progreso

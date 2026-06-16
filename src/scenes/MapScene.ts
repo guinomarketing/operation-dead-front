@@ -6,6 +6,8 @@ import type { RunState, RunMapDef, RunNodeDef } from '../types/RunTypes';
 import { EVENTS } from '../data/events';
 import { UPGRADES } from '../data/upgrades';
 import { UNIT_INDEX } from '../data/units';
+import { RELIC_INDEX } from '../data/relics';
+import { TooltipManager } from '../ui/TooltipManager';
 import { Audio2 } from '../systems/AudioSystem';
 
 export class MapScene extends Phaser.Scene {
@@ -53,6 +55,10 @@ export class MapScene extends Phaser.Scene {
     // Renderizar barra superior y botones HTML
     this.uiContainer = document.getElementById('ui-layer');
     this.createHTMLOverlay();
+
+    this.events.on('shutdown', () => {
+      TooltipManager.hide();
+    });
 
     // Fade in
     this.cameras.main.fadeIn(600, 0, 0, 0);
@@ -347,12 +353,74 @@ export class MapScene extends Phaser.Scene {
     currencyDiv.style.gap = '20px';
     currencyDiv.style.fontFamily = 'var(--font-title)';
     currencyDiv.style.fontSize = '14px';
+    currencyDiv.style.alignItems = 'center';
 
     currencyDiv.innerHTML = `
       <div style="color:var(--primary)">⬢ ${this.runState.intelEarned} <span style="font-family:var(--font-body); font-size:10px; color:#aaa;">INTEL</span></div>
       <div style="color:#eab308">★ ${this.runState.medalsEarned} <span style="font-family:var(--font-body); font-size:10px; color:#aaa;">MEDALLAS</span></div>
       <div style="color:#fff">⚙ ${this.runState.upgradeIds.length} <span style="font-family:var(--font-body); font-size:10px; color:#aaa;">MEJORAS</span></div>
     `;
+
+    // Reliquias visuales
+    const relicsContainer = document.createElement('div');
+    relicsContainer.style.display = 'flex';
+    relicsContainer.style.alignItems = 'center';
+    relicsContainer.style.gap = '4px';
+    relicsContainer.style.color = '#fbbf24';
+
+    const relicLabel = document.createElement('span');
+    relicLabel.innerText = 'R:';
+    relicLabel.style.marginRight = '2px';
+    relicsContainer.appendChild(relicLabel);
+
+    const relicIds = this.runState.relicIds || [];
+    if (relicIds.length === 0) {
+      const noneSpan = document.createElement('span');
+      noneSpan.innerText = '0';
+      noneSpan.style.fontFamily = 'var(--font-body)';
+      noneSpan.style.fontSize = '10px';
+      noneSpan.style.color = '#aaa';
+      relicsContainer.appendChild(noneSpan);
+    } else {
+      relicIds.forEach((id) => {
+        const relic = RELIC_INDEX[id];
+        if (!relic) return;
+
+        const frameIndex = relic.iconFrame ?? 0;
+        const cols = 5;
+        const c = frameIndex % cols;
+        const r = Math.floor(frameIndex / cols);
+        const size = 20; // pequeño en la barra
+        const bgWidth = 320 * (size / 64);
+        const bgHeight = 256 * (size / 64);
+
+        const relicEl = document.createElement('div');
+        relicEl.style.width = `${size}px`;
+        relicEl.style.height = `${size}px`;
+        relicEl.style.backgroundImage = `url('assets/sprites/relics-sheet.png')`;
+        relicEl.style.backgroundSize = `${bgWidth}px ${bgHeight}px`;
+        relicEl.style.backgroundPosition = `-${c * size}px -${r * size}px`;
+        relicEl.style.imageRendering = 'pixelated';
+        relicEl.style.cursor = 'pointer';
+        relicEl.style.border = '1px solid rgba(251, 191, 36, 0.4)';
+        relicEl.style.borderRadius = '2px';
+
+        relicEl.onmouseenter = (e) => {
+          TooltipManager.show(e.clientX, e.clientY, {
+            name: relic.name,
+            description: relic.description,
+            rarity: relic.rarity,
+            flavor: relic.flavor,
+          });
+        };
+        relicEl.onmouseleave = () => {
+          TooltipManager.hide();
+        };
+
+        relicsContainer.appendChild(relicEl);
+      });
+    }
+    currencyDiv.appendChild(relicsContainer);
 
     // Derecha: Botón Salir / Retirarse y Ver Plantel
     const rightDiv = document.createElement('div');

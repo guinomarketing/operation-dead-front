@@ -5,12 +5,18 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { COLORS, hex, FONTS } from '../ui/colors';
 import { UPGRADE_INDEX } from '../data/upgrades';
+import { RELICS, RELIC_INDEX } from '../data/relics';
+import { TooltipManager } from '../ui/TooltipManager';
 import { MetaProgression } from '../systems/MetaProgression';
 
 interface ResultData {
   outcome: 'won' | 'lost';
   nodeType?: string;
 }
+
+type RewardChoice =
+  | { kind: 'upgrade'; id: string; name: string; description: string }
+  | { kind: 'relic'; id: string; name: string; description: string; rarity: string };
 
 export class ResultScene extends Phaser.Scene {
   private nodeType: string = 'battle';
@@ -28,6 +34,10 @@ export class ResultScene extends Phaser.Scene {
     this.startAmbientParticles(won);
     this.drawContent(cx, won);
     this.drawVignette();
+
+    this.events.on('shutdown', () => {
+      TooltipManager.hide();
+    });
 
     this.cameras.main.fadeIn(800, 0, 0, 0);
   }
@@ -164,16 +174,49 @@ export class ResultScene extends Phaser.Scene {
 
     this.tweens.add({ targets: title, alpha: 1, duration: 600, delay });
 
-    const pool = ['barracks-1', 'armory-1', 'med-tent-1', 'engineering-bay-1', 'war-room-1'];
-    const picked = Phaser.Utils.Array.Shuffle(pool).slice(0, 3);
+    const runState = this.game.registry.get('runState');
+    const ownedUpgrades = new Set<string>(runState?.upgradeIds || []);
+    const ownedRelics = new Set<string>(runState?.relicIds || []);
+    const upgradePool: RewardChoice[] = ['barracks-1', 'armory-1', 'med-tent-1', 'engineering-bay-1', 'war-room-1']
+      .filter((id) => !ownedUpgrades.has(id))
+      .map((id) => ({
+        kind: 'upgrade',
+        id,
+        name: UPGRADE_INDEX[id].name,
+        description: UPGRADE_INDEX[id].description,
+      }));
+    const relicPool: RewardChoice[] = RELICS
+      .filter((relic) => !ownedRelics.has(relic.id))
+      .map((relic) => ({
+        kind: 'relic',
+        id: relic.id,
+        name: relic.name,
+        description: relic.description,
+        rarity: relic.rarity,
+      }));
+    const picked: RewardChoice[] = [];
+    const shuffledRelics = Phaser.Utils.Array.Shuffle([...relicPool]);
+    if (shuffledRelics.length > 0) picked.push(shuffledRelics.shift()!);
+
+    const mixedPool = Phaser.Utils.Array.Shuffle([...upgradePool, ...shuffledRelics]);
+    while (picked.length < 3 && mixedPool.length > 0) {
+      picked.push(mixedPool.shift()!);
+    }
+    if (picked.length === 0) {
+      picked.push(
+        ...Phaser.Utils.Array.Shuffle(Object.values(UPGRADE_INDEX).map((up) => ({
+          kind: 'upgrade' as const,
+          id: up.id,
+          name: up.name,
+          description: up.description,
+        }))).slice(0, 3),
+      );
+    }
 
     const containers: Phaser.GameObjects.Container[] = [];
     const zones: Phaser.GameObjects.Zone[] = [];
 
-    picked.forEach((upId, index) => {
-      const up = UPGRADE_INDEX[upId];
-      if (!up) return;
-
+    picked.forEach((reward, index) => {
       const x = cx + (index - 1) * 185;
       const y = 320;
       const w = 150;
@@ -185,15 +228,25 @@ export class ResultScene extends Phaser.Scene {
       const bg = this.add.graphics();
       bg.fillStyle(COLORS.cardFace, 1);
       bg.fillRoundedRect(-w/2, -h/2, w, h, 6);
-      bg.lineStyle(2, COLORS.metalFrame, 0.8);
+      bg.lineStyle(2, reward.kind === 'relic' ? COLORS.gold : COLORS.metalFrame, 0.8);
       bg.strokeRoundedRect(-w/2, -h/2, w, h, 6);
       
       // Card header highlight
-      bg.fillStyle(COLORS.panelEdge, 0.5);
+      bg.fillStyle(reward.kind === 'relic' ? COLORS.goldDark : COLORS.panelEdge, 0.5);
       bg.fillRect(-w/2 + 2, -h/2 + 2, w - 4, 30);
+
+      const kindText = reward.kind === 'relic'
+        ? `RELIQUIA ${reward.rarity.toUpperCase()}`
+        : 'MEJORA';
+      const kind = this.add.text(0, -h/2 + 46, kindText, {
+        fontFamily: FONTS.ui,
+        fontSize: '9px',
+        color: reward.kind === 'relic' ? hex(COLORS.gold) : hex(COLORS.inkDim),
+        align: 'center',
+      }).setOrigin(0.5);
       
       // Title
-      const t = this.add.text(0, -h/2 + 15, up.name, {
+      const t = this.add.text(0, -h/2 + 15, reward.name, {
         fontFamily: FONTS.ui,
         fontSize: '13px',
         color: '#fff',
@@ -202,8 +255,34 @@ export class ResultScene extends Phaser.Scene {
         wordWrap: { width: w - 10 }
       }).setOrigin(0.5);
       
-      // Description
-      const desc = this.add.text(0, 10, up.description, {
+      // Description & Icon
+      let descY = 15;
+      if (reward.kind === 'relic') {
+        descY = 38;
+        const relicDef = RELIC_INDEX[reward.id];
+        const frameIndex = relicDef?.iconFrame ?? 0;
+        const icon = this.add.image(0, -3, 'relics-sheet', frameIndex);
+        icon.setDisplaySize(36, 36);
+        container.add(icon);
+      } else {
+        const iconGraphics = this.add.graphics();
+        iconGraphics.lineStyle(2, COLORS.metalFrame, 0.8);
+        iconGraphics.strokeCircle(0, -5, 12);
+        iconGraphics.strokeCircle(0, -5, 4);
+        for (let a = 0; a < 360; a += 45) {
+          const rad = Phaser.Math.DegToRad(a);
+          iconGraphics.lineBetween(
+            Math.cos(rad) * 12,
+            -5 + Math.sin(rad) * 12,
+            Math.cos(rad) * 16,
+            -5 + Math.sin(rad) * 16
+          );
+        }
+        container.add(iconGraphics);
+        descY = 38;
+      }
+
+      const desc = this.add.text(0, descY, reward.description, {
         fontFamily: FONTS.body,
         fontSize: '11px',
         color: hex(COLORS.inkDim),
@@ -211,7 +290,7 @@ export class ResultScene extends Phaser.Scene {
         wordWrap: { width: w - 16 }
       }).setOrigin(0.5);
       
-      container.add([bg, t, desc]);
+      container.add([bg, t, kind, desc]);
       container.setAlpha(0);
       container.setScale(0.8);
       
@@ -228,15 +307,54 @@ export class ResultScene extends Phaser.Scene {
       
       // Click zone
       const zone = this.add.zone(x, y, w, h).setInteractive({ useHandCursor: true });
+
+      if (reward.kind === 'relic') {
+        const relicDef = RELIC_INDEX[reward.id];
+        if (relicDef) {
+          zone.on('pointerover', (pointer: Phaser.Input.Pointer) => {
+            const ev = pointer.event as any;
+            const cx = ev?.clientX ?? (ev?.touches?.[0]?.clientX ?? pointer.x);
+            const cy = ev?.clientY ?? (ev?.touches?.[0]?.clientY ?? pointer.y);
+            TooltipManager.show(cx, cy, {
+              name: relicDef.name,
+              description: relicDef.description,
+              rarity: relicDef.rarity,
+              flavor: relicDef.flavor,
+            });
+          });
+          zone.on('pointerout', () => {
+            TooltipManager.hide();
+          });
+          zone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            const ev = pointer.event as any;
+            const cx = ev?.clientX ?? (ev?.touches?.[0]?.clientX ?? pointer.x);
+            const cy = ev?.clientY ?? (ev?.touches?.[0]?.clientY ?? pointer.y);
+            TooltipManager.show(cx, cy, {
+              name: relicDef.name,
+              description: relicDef.description,
+              rarity: relicDef.rarity,
+              flavor: relicDef.flavor,
+            });
+          });
+        }
+      }
+
       zone.on('pointerdown', () => {
+        TooltipManager.hide();
         this.tweens.add({ targets: container, scale: 0.95, duration: 60 });
       });
       zone.on('pointerup', () => {
+        TooltipManager.hide();
         // Apply reward to persistent runState
         const runState = this.game.registry.get('runState');
         if (runState) {
-          if (!runState.upgradeIds.includes(upId)) {
-            runState.upgradeIds.push(upId);
+          if (!runState.upgradeIds) runState.upgradeIds = [];
+          if (!runState.relicIds) runState.relicIds = [];
+          if (reward.kind === 'upgrade' && !runState.upgradeIds.includes(reward.id)) {
+            runState.upgradeIds.push(reward.id);
+          }
+          if (reward.kind === 'relic' && !runState.relicIds.includes(reward.id)) {
+            runState.relicIds.push(reward.id);
           }
           // Reward Intel & Medals on victory (medallas también al banco persistente)
           runState.intelEarned += 1;

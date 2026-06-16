@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, FIELD, BASES } from '../utils/constants';
 import { COLORS, hex, FONTS } from '../ui/colors';
-import { BattleSystem, type Combatant } from '../systems/BattleSystem';
+import { BattleSystem, type BattleEvent, type Combatant } from '../systems/BattleSystem';
 import { UNIT_INDEX } from '../data/units';
 import { ABILITY_INDEX } from '../data/abilities';
 import { SpriteFactory } from '../rendering/SpriteFactory';
@@ -62,10 +62,12 @@ export class BattleScene extends Phaser.Scene {
     const bossId = OPERATION_INDEX[operationId]?.bossId;
     const battleSeed = `${runState?.seed || 'preview'}:${runState?.currentNodeId || nodeType}`;
 
-    this.sim = new BattleSystem(baseHp, activeUpgrades, nodeType as any, battleMode as any, bossId, operationId, battleSeed);
+    const activeRelics = runState ? (runState.relicIds || []) : [];
+    this.sim = new BattleSystem(baseHp, activeUpgrades, nodeType as any, battleMode as any, bossId, operationId, battleSeed, activeRelics);
+    this.applyBossPreviewHp(nodeType);
 
     if (runState) {
-      this.sim.morale = runState.morale;
+      this.sim.morale = this.sim.getBattleStartMorale(runState.morale);
       if (runState.suppliesBonusNextBattle) {
         this.sim.supplies += runState.suppliesBonusNextBattle;
         runState.suppliesBonusNextBattle = 0; // consumir bono
@@ -356,7 +358,6 @@ export class BattleScene extends Phaser.Scene {
       return; // No quedan soldados de esta clase
     }
 
-    const def = UNIT_INDEX[unitId as keyof typeof UNIT_INDEX];
     if (!this.sim.canAfford(unitId)) {
       this.ui.flashSupplies();
       return;
@@ -365,7 +366,7 @@ export class BattleScene extends Phaser.Scene {
     const c = this.sim.spawnAlly(unitId, lane, soldier);
     if (c) {
       this.deployedSoldierIds.add(soldier.id);
-      this.cooldowns.set(unitId, def.deployCooldown);
+      this.cooldowns.set(unitId, this.sim.getDeployCooldown(unitId));
       this.spawnUnit(c);
       this.spawnDeployPuff(FIELD.SPAWN_ALLY_X, FIELD.LANES_Y[lane]);
       Audio2.play('deploy');
@@ -437,6 +438,19 @@ export class BattleScene extends Phaser.Scene {
       this.cooldowns.set(unitId, 0);
       this.tryDeployInLane(unitId, lane);
     }
+  }
+
+  private applyBossPreviewHp(nodeType: string): void {
+    if (nodeType !== 'boss') return;
+    const hpParam = new URLSearchParams(window.location.search).get('bossHpPct');
+    if (!hpParam) return;
+
+    const hpPct = Phaser.Math.Clamp(Number(hpParam), 1, 99) / 100;
+    const boss = this.sim.combatants.find((c) => c.faction === 'enemy' && c.defId === this.sim.bossId);
+    if (!boss || Number.isNaN(hpPct)) return;
+
+    boss.hp = Math.max(1, Math.floor(boss.maxHp * hpPct));
+    this.sim.enemyBaseHp = boss.hp;
   }
 
   private spawnDeployPuff(x: number, y: number): void {
@@ -736,6 +750,163 @@ export class BattleScene extends Phaser.Scene {
   //  GAME LOOP
   // ═══════════════════════════════════════════════════════════
 
+  private triggerBossPhaseFx(ev: BattleEvent): void {
+    const x = ev.x ?? FIELD.SPAWN_ENEMY_X;
+    const y = ev.y ?? FIELD.CENTER_Y;
+    const color = this.bossAccentColor(ev.defId);
+    this.renderers.get(ev.uid ?? -1)?.playBossPhaseShift(ev.phaseIndex ?? 1);
+    this.cameras.main.shake(500, 0.012);
+
+    const flash = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, color, 0.20);
+    flash.setDepth(870);
+    this.tweens.add({ targets: flash, alpha: 0, duration: 760, onComplete: () => flash.destroy() });
+
+    this.spawnBossGroundRing(x, y - 54, color, 80, 980);
+    this.spawnBossAlert(this.bossPhaseLabel(ev.defId, ev.phaseIndex), color);
+  }
+
+  private triggerBossAbilityFx(ev: BattleEvent): void {
+    this.renderers.get(ev.uid ?? -1)?.playBossAbilityCue(ev.abilityId);
+    const x = ev.x ?? FIELD.SPAWN_ENEMY_X;
+    const y = ev.y ?? FIELD.CENTER_Y;
+
+    if (ev.abilityId === 'summon') {
+      this.cameras.main.shake(160, 0.004);
+      for (const laneY of FIELD.LANES_Y) this.spawnDeployPuff(FIELD.SPAWN_ENEMY_X, laneY);
+      this.spawnFloatingLabel('REFUERZOS', FIELD.SPAWN_ENEMY_X - 24, y - 52, 0xffcc66);
+      return;
+    }
+
+    if (ev.abilityId === 'mutate') {
+      this.spawnBossGroundRing(x, y - 34, COLORS.serumGlow, 44, 640);
+      this.spawnGreenSmoke(x, y - 32);
+      this.spawnFloatingLabel('MUTACION', x, y - 72, COLORS.serumGlow);
+      return;
+    }
+
+    if (ev.abilityId === 'heal-zone') {
+      Audio2.play('heal');
+      this.spawnBossGroundRing(x, y - 48, COLORS.serumGlow, 110, 860);
+      for (let i = 0; i < 8; i++) {
+        this.spawnFloatingLabel('+', x + Phaser.Math.Between(-85, 85), y - 46 + Phaser.Math.Between(-34, 34), COLORS.textHeal, 16);
+      }
+      return;
+    }
+
+    if (ev.abilityId === 'cannon') {
+      this.triggerBossCannonFx(ev);
+    }
+  }
+
+  private triggerBossCannonFx(ev: BattleEvent): void {
+    const targetX = ev.x ?? GAME_WIDTH * 0.35;
+    const targetY = ev.y ?? FIELD.CENTER_Y;
+    const boss = this.sim.combatants.find((c) => c.uid === ev.uid);
+    const sourceX = boss?.x ?? FIELD.SPAWN_ENEMY_X;
+    const sourceY = boss ? FIELD.LANES_Y[boss.lane] - 92 : targetY - 80;
+
+    Audio2.play('explosion');
+    this.cameras.main.shake(240, 0.010);
+
+    const trail = this.add.graphics().setDepth(845);
+    trail.lineStyle(5, COLORS.fireGlow, 0.78);
+    trail.lineBetween(sourceX, sourceY, targetX, targetY - 36);
+    this.tweens.add({ targets: trail, alpha: 0, duration: 180, onComplete: () => trail.destroy() });
+
+    const blast = this.add.circle(targetX, targetY - 28, 58, COLORS.fireGlow, 0.55).setDepth(850);
+    this.tweens.add({
+      targets: blast,
+      scale: 1.45,
+      alpha: 0,
+      duration: 360,
+      onComplete: () => blast.destroy(),
+    });
+
+    for (let i = 0; i < 10; i++) {
+      const spark = this.add.rectangle(targetX, targetY - 28, 5, 5, i % 2 ? COLORS.ember : COLORS.impact, 0.9).setDepth(860);
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Phaser.Math.Between(22, 82);
+      this.tweens.add({
+        targets: spark,
+        x: targetX + Math.cos(angle) * dist,
+        y: targetY - 28 + Math.sin(angle) * dist,
+        alpha: 0,
+        angle: Phaser.Math.Between(-180, 180),
+        duration: Phaser.Math.Between(260, 560),
+        onComplete: () => spark.destroy(),
+      });
+    }
+  }
+
+  private spawnBossGroundRing(x: number, y: number, color: number, radius: number, duration: number): void {
+    const ring = this.add.graphics().setDepth(y + 95);
+    ring.alpha = 1;
+    this.tweens.add({
+      targets: ring,
+      alpha: 0,
+      duration,
+      onUpdate: () => {
+        const p = 1 - ring.alpha;
+        ring.clear();
+        ring.fillStyle(color, ring.alpha * 0.10);
+        ring.fillCircle(x, y, radius + p * 34);
+        ring.lineStyle(4, color, ring.alpha * 0.85);
+        ring.strokeCircle(x, y, radius + p * 58);
+      },
+      onComplete: () => ring.destroy(),
+    });
+  }
+
+  private spawnBossAlert(text: string, color: number): void {
+    const txt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 104, text, {
+      fontFamily: FONTS.title,
+      fontSize: '28px',
+      color: hex(color),
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(880);
+    this.tweens.add({
+      targets: txt,
+      y: GAME_HEIGHT / 2 - 150,
+      alpha: 0,
+      delay: 980,
+      duration: 650,
+      onComplete: () => txt.destroy(),
+    });
+  }
+
+  private spawnFloatingLabel(text: string, x: number, y: number, color: number, fontSize = 13): void {
+    const label = this.add.text(x, y, text, {
+      fontFamily: FONTS.ui,
+      fontSize: `${fontSize}px`,
+      color: hex(color),
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(880);
+    this.tweens.add({
+      targets: label,
+      y: y - 34,
+      alpha: 0,
+      duration: 720,
+      ease: 'Power2',
+      onComplete: () => label.destroy(),
+    });
+  }
+
+  private bossAccentColor(defId?: string): number {
+    if (defId === 'doctor-totenkopf') return COLORS.serumGlow;
+    if (defId === 'panzer-corpse-engine') return COLORS.fireGlow;
+    return COLORS.hpBad;
+  }
+
+  private bossPhaseLabel(defId?: string, phaseIndex = 1): string {
+    if (defId === 'doctor-totenkopf') return phaseIndex >= 2 ? 'AUTOINYECCION' : 'PRUEBAS ACELERADAS';
+    if (defId === 'panzer-corpse-engine') return 'MOTOR EXPUESTO';
+    return phaseIndex >= 2 ? 'FURIA DE METAL' : 'AURA DE COMANDO';
+  }
+
   update(_time: number, delta: number): void {
     if (this.sim.outcome !== 'ongoing') return;
 
@@ -810,6 +981,14 @@ export class BattleScene extends Phaser.Scene {
       }
       if (ev.type === 'base-hit') {
         if (ev.amount === 999) {
+          this.triggerBossPhaseFx(ev);
+          continue;
+        }
+        if (ev.abilityId === 'cannon') {
+          this.triggerBossAbilityFx(ev);
+          continue;
+        }
+        if (ev.amount === 999) {
           // Boss phase transition
           this.cameras.main.shake(500, 0.012);
           const flash = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xff0000, 0.25);
@@ -844,6 +1023,10 @@ export class BattleScene extends Phaser.Scene {
         }
       }
       if (ev.type === 'heal') {
+        if (ev.faction === 'enemy' && ev.abilityId) {
+          this.triggerBossAbilityFx(ev);
+          continue;
+        }
         if (ev.faction === 'enemy' && ev.amount === 888) {
           this.cameras.main.shake(200, 0.006);
           this.spawnDeployPuff(FIELD.SPAWN_ENEMY_X, FIELD.LANES_Y[0]);
@@ -883,6 +1066,12 @@ export class BattleScene extends Phaser.Scene {
   private refreshHud(): void {
     const runState = this.game.registry.get('runState');
     const roster = runState ? runState.roster : [];
+    const unitCosts = new Map<string, number>();
+    const deployCooldowns = new Map<string, number>();
+    for (const unitId of Object.keys(UNIT_INDEX)) {
+      unitCosts.set(unitId, this.sim.getUnitCost(unitId));
+      deployCooldowns.set(unitId, this.sim.getDeployCooldown(unitId));
+    }
 
     this.ui.update({
       supplies: this.sim.supplies,
@@ -895,6 +1084,8 @@ export class BattleScene extends Phaser.Scene {
       morale: this.sim.morale,
       roster,
       deployedSoldierIds: this.deployedSoldierIds,
+      unitCosts,
+      deployCooldowns,
       wave: this.sim.nodeType === 'boss'
         ? undefined
         : { current: this.sim.waveSys.state.currentWave, total: this.sim.waveSys.state.totalWaves },
